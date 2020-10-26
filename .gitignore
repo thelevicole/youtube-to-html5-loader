@@ -1,3 +1,4 @@
+.idea/workspace.xml
 
 # Created by https://www.toptal.com/developers/gitignore/api/node,macos,linux,windows
 # Edit at https://www.toptal.com/developers/gitignore?templates=node,macos,linux,windows
@@ -131,7 +132,6 @@ typings/
 
 # Nuxt.js build / generate output
 .nuxt
-dist
 
 # Gatsby files
 .cache/
