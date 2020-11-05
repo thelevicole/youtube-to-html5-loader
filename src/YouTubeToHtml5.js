@@ -156,7 +156,7 @@ YouTubeToHtml5.prototype.itagMap = {
 YouTubeToHtml5.prototype.urlToId = function( url ) {
     const regex = /^(?:http(?:s)?:\/\/)?(?:www\.)?(?:m\.)?(?:youtu\.be\/|(?:(?:youtube-nocookie\.com\/|youtube\.com\/)(?:(?:watch)?\?(?:.*&)?v(?:i)?=|(?:embed|v|vi|user)\/)))([a-zA-Z0-9\-_]*)/;
     const matches = url.match( regex );
-    return matches[ 1 ] || url;
+    return Array.isArray( matches ) && matches[ 1 ] ? matches[ 1 ] : url;
 };
 
 /**
