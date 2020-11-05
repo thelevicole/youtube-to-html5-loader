@@ -148,6 +148,18 @@ YouTubeToHtml5.prototype.itagMap = {
 };
 
 /**
+ * Extract the Youtube ID from a URL.
+ *
+ * @param {string} url
+ * @returns {string}
+ */
+YouTubeToHtml5.prototype.urlToId = function( url ) {
+    const regex = /^(?:http(?:s)?:\/\/)?(?:www\.)?(?:m\.)?(?:youtu\.be\/|(?:(?:youtube-nocookie\.com\/|youtube\.com\/)(?:(?:watch)?\?(?:.*&)?v(?:i)?=|(?:embed|v|vi|user)\/)))([a-zA-Z0-9\-_]*)/;
+    const matches = url.match( regex );
+    return matches[ 1 ] || url;
+};
+
+/**
  * Basic GET ajax request.
  *
  * @param url
@@ -269,7 +281,8 @@ YouTubeToHtml5.prototype.load = function() {
     this.getElements().forEach( element => {
         const attribute = this.options.attribute;
         if ( element.getAttribute( attribute ) ) {
-            const requestUrl = this.youtubeDataApiEndpoint( element.getAttribute( attribute ) );
+            const videoId = this.urlToId( element.getAttribute( attribute ) );
+            const requestUrl = this.youtubeDataApiEndpoint( videoId );
 
             this.doAction( 'api.before', element );
 
