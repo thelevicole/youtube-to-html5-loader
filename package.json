@@ -1,6 +1,14 @@
 {
   "name": "@thelevicole/youtube-to-html5-loader",
-  "version": "1.1.1",
+  "version": "1.1.2",
+  "description": "A javascript library to load YoutTube videos as HTML5 emebed elements.",
+  "main": "dist/YouTubeToHtml5.js",
+  "keywords": [
+    "youtube",
+    "html5-video",
+    "youtube-api",
+    "video"
+  ],
   "devDependencies": {
     "@babel/core": "^7.11.1",
     "@babel/preset-env": "^7.11.0",
@@ -17,5 +25,18 @@
     "ie 8",
     "ie 7"
   ],
-  "dependencies": {}
+  "dependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thelevicole/youtube-to-html5-loader.git"
+  },
+  "author": {
+    "name": "Levi Cole",
+    "email": "dev@thelevicole.com"
+  },
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/thelevicole/youtube-to-html5-loader/issues"
+  },
+  "homepage": "https://thelevicole.com/youtube-to-html5-loader/"
 }

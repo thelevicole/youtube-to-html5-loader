@@ -1,4 +1,7 @@
-# Load YoutTube videos as HTML5 emebed element  
+# Load YoutTube videos as HTML5 emebed element
+
+[![Latest Stable Version](https://img.shields.io/npm/v/@thelevicole/youtube-to-html5-loader)](https://www.npmjs.com/package/@thelevicole/youtube-to-html5-loader)
+[![Total Downloads](https://img.shields.io/npm/dt/@thelevicole/youtube-to-html5-loader)](https://www.npmjs.com/package/@thelevicole/youtube-to-html5-loader)
   
 ## Basic usage example  
 Replacing `YOUTUBE_URL_OR_ID_GOES_HERE` with your video URL or ID.
