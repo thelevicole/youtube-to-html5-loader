@@ -9,7 +9,7 @@
 function YouTubeToHtml5( options = {} ) {
 
     // Basic option setting.
-    for ( let key in this.options ) {
+    for ( var key in this.options ) {
         if ( key in options ) {
             this.options[ key ] = options[ key ];
         }
@@ -188,10 +188,25 @@ YouTubeToHtml5.prototype.fetch = function( url ) {
 /**
  * Get list of elements found with the selector.
  *
- * @returns {NodeListOf<Element>}
+ * @param {NodeList|HTMLCollection|string} selector
+ * @returns {array}
  */
-YouTubeToHtml5.prototype.getElements = function() {
-    return this.applyFilters( 'elements', document.querySelectorAll( this.options.selector ) );
+YouTubeToHtml5.prototype.getElements = function( selector ) {
+    var elements = null;
+
+    if ( selector ) {
+        if ( NodeList.prototype.isPrototypeOf( selector ) || HTMLCollection.prototype.isPrototypeOf( selector ) ) {
+            elements = selector;
+        } else if ( typeof selector === 'object' && 'nodeType' in selector && selector.nodeType ) {
+            elements = [ selector ];
+        } else {
+            elements = document.querySelectorAll( this.options.selector );
+        }
+    }
+
+    elements = Array.from( elements || '' );
+
+    return this.applyFilters( 'elements', elements );
 };
 
 /**
@@ -278,40 +293,52 @@ YouTubeToHtml5.prototype.parseYoutubeMeta = function( rawData ) {
  * Run our full process. Loops through each element matching the selector.
  */
 YouTubeToHtml5.prototype.load = function() {
-    this.getElements().forEach( element => {
-        const attribute = this.options.attribute;
-        if ( element.getAttribute( attribute ) ) {
-            const videoId = this.urlToId( element.getAttribute( attribute ) );
-            const requestUrl = this.youtubeDataApiEndpoint( videoId );
+    const elements = this.getElements( this.options.selector );
 
-            this.doAction( 'api.before', element );
+    if ( elements && elements.length ) {
+        elements.forEach( element => {
+            this.loadSingle( element );
+        } );
+    }
+};
 
-            this.fetch( requestUrl ).then( response => {
+/**
+ * Process a single element.
+ *
+ * @param {Element} element
+ * @param {null|string} attr Used to override default setting.
+ */
+YouTubeToHtml5.prototype.loadSingle = function( element, attr = null ) {
+    const attribute = attr || this.options.attribute;
+    if ( element.getAttribute( attribute ) ) {
+        const videoId = this.urlToId( element.getAttribute( attribute ) );
+        const requestUrl = this.youtubeDataApiEndpoint( videoId );
 
-                if ( response ) {
+        this.doAction( 'api.before', element );
 
-                    this.doAction( 'api.response', element, response );
+        this.fetch( requestUrl ).then( response => {
 
-                    const streams = this.parseYoutubeMeta( response );
+            if ( response ) {
 
-                    if ( streams && this.options.formats ) {
+                const streams = this.parseYoutubeMeta( response );
 
-                        for ( let i = 0; i < this.options.formats.length; i++ ) {
-                            const format = this.options.formats[ i ];
-                            if ( format in streams ) {
-                                element.src = this.applyFilters( 'video.source', streams[ format ], element, format, streams );
-                                break;
-                            }
+                if ( streams && this.options.formats ) {
+
+                    for ( let i = 0; i < this.options.formats.length; i++ ) {
+                        const format = this.options.formats[ i ];
+                        if ( format in streams ) {
+                            element.src = this.applyFilters( 'video.source', streams[ format ], element, format, streams );
+                            break;
                         }
-
                     }
-                }
-            } ).finally( response => {
-                this.doAction( 'api.end', element, response );
-            } );
 
-        }
-    } );
+                }
+            }
+        } ).finally( response => {
+            this.doAction( 'api.after', element, response );
+        } );
+
+    }
 };
 
 if ( typeof module === 'object' && typeof module.exports === 'object' ) {

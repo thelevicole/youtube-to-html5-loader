@@ -30,18 +30,18 @@ Replacing `YOUTUBE_URL_OR_ID_GOES_HERE` with your video URL or ID.
   
 <script src="YouTubeToHtml5.js"></script>  
 <script>  
- var player = new YouTubeToHtml5( {  
-  autoload: false  
- } );  
-  
+  var player = new YouTubeToHtml5( {  
+    autoload: false  
+  } );  
+
   player.addAction( 'api.before', function( element ) {  
-  element.classList.add( 'is-loading' );  
- } );  
-    
-  player.addAction( 'api.end', function( element ) {  
-  element.classList.remove( 'is-loading' );  
- } );  
-  
+    element.classList.add( 'is-loading' );  
+  } );  
+
+  player.addAction( 'api.after', function( element ) {  
+    element.classList.remove( 'is-loading' );  
+  } );  
+
   player.load();  
 </script>  
 ```
