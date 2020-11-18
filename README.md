@@ -5,44 +5,58 @@
   
 ## Basic usage example  
 Replacing `YOUTUBE_URL_OR_ID_GOES_HERE` with your video URL or ID.
-  
-```html  
-<video data-yt2html5="YOUTUBE_URL_OR_ID_GOES_HERE"></video>  
-  
-<script src="YouTubeToHtml5.js"></script>  
-<script>new YouTubeToHtml5();</script>  
+
+HTML:
+```html
+<video data-yt2html5="YOUTUBE_URL_OR_ID_GOES_HERE"></video>
+```
+
+### NPM
+```
+npm i @thelevicole/youtube-to-html5-loader
+```
+
+```javascript
+const YouTubeToHtml5 = require('@thelevicole/youtube-to-html5-loader');
+new YouTubeToHtml5();
+```
+
+### jsDelivr CDN
+```html
+<script src="https://cdn.jsdelivr.net/gh/thelevicole/youtube-to-html5-loader@2.0.0/dist/YouTubeToHtml5.js"></script>
+<script>new YouTubeToHtml5();</script>
+```
+
+## Options example
+```html
+<video class="youtube-video" data-yt="https://youtube.com/watch?v=ScMzIvxBSi4"></video>
+
+<script src="YouTubeToHtml5.js"></script>
+<script>new YouTubeToHtml5( {
+  selector: '.youtube-video',
+  attribute: 'data-yt'
+} );</script>
 ```  
   
-## Options example  
-```html  
-<video class="youtube-video" data-yt="https://youtube.com/watch?v=ScMzIvxBSi4"></video>  
-  
-<script src="YouTubeToHtml5.js"></script>  
-<script>new YouTubeToHtml5( {  
-  selector: '.youtube-video',  
-  attribute: 'data-yt'  
-} );</script>  
-```  
-  
-## Internal API example  
-```html  
-<video data-yt2html5="YOUTUBE_URL_OR_ID_GOES_HERE"></video>  
-  
-<script src="YouTubeToHtml5.js"></script>  
-<script>  
-  var player = new YouTubeToHtml5( {  
-    autoload: false  
-  } );  
+## Internal API example
+```html
+<video data-yt2html5="YOUTUBE_URL_OR_ID_GOES_HERE"></video>
 
-  player.addAction( 'api.before', function( element ) {  
-    element.classList.add( 'is-loading' );  
-  } );  
+<script src="YouTubeToHtml5.js"></script>
+<script>
+  var player = new YouTubeToHtml5({
+    autoload: false
+  });
 
-  player.addAction( 'api.after', function( element ) {  
-    element.classList.remove( 'is-loading' );  
-  } );  
+  player.addAction('api.before', function(element) {
+    element.classList.add('is-loading');
+  } );
 
-  player.load();  
+  player.addAction('api.after', function(element) {
+    element.classList.remove('is-loading');
+  } );
+
+  player.load();
 </script>  
 ```
 
@@ -63,4 +77,3 @@ youtube.com/watch?dev=inprogress&v=ScMzIvxBSi4&feature=related
 m.youtube.com/watch?v=ScMzIvxBSi4
 youtube-nocookie.com/embed/ScMzIvxBSi4
 ```
-
