@@ -1,6 +1,6 @@
 {
   "name": "@thelevicole/youtube-to-html5-loader",
-  "version": "3.1.0",
+  "version": "3.1.1",
   "description": "A javascript library to load YoutTube videos as HTML5 emebed elements.",
   "main": "dist/YouTubeToHtml5.js",
   "keywords": [
