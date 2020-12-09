@@ -26,7 +26,7 @@ new YouTubeToHtml5();
 ### jsDelivr CDN
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/thelevicole/youtube-to-html5-loader@2.0.0/dist/YouTubeToHtml5.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/thelevicole/youtube-to-html5-loader@3.0.0/dist/YouTubeToHtml5.js"></script>
 ```
 
 ## Options example
