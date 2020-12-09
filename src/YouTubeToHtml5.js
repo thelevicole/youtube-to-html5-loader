@@ -8,10 +8,18 @@
  */
 function YouTubeToHtml5( options = {} ) {
 
+    /**
+     * Create an empty object for storing options.
+     * @type {object}
+     */
+    this.options = {};
+
     // Basic option setting.
-    for ( var key in this.options ) {
+    for ( var key in this.defaultOptions ) {
         if ( key in options ) {
             this.options[ key ] = options[ key ];
+        } else {
+            this.options[ key ] = this.defaultOptions[ key ];
         }
     }
 
@@ -22,11 +30,11 @@ function YouTubeToHtml5( options = {} ) {
 }
 
 /**
- * Store overridable options.
+ * Default settable options.
  *
  * @type {object}
  */
-YouTubeToHtml5.prototype.options = {
+YouTubeToHtml5.prototype.defaultOptions = {
     selector: 'video[data-yt2html5]',
     attribute: 'data-yt2html5',
     formats: '*', // Accepts an array of formats e.g. [ '1080p', '720p', '320p' ] or a single format '1080p'. Asterix for all.
