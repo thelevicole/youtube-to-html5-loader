@@ -29,7 +29,7 @@ function YouTubeToHtml5( options = {} ) {
 YouTubeToHtml5.prototype.options = {
     selector: 'video[data-yt2html5]',
     attribute: 'data-yt2html5',
-    formats: [ '1080p', '720p', '360p' ],
+    formats: '*', // Accepts an array of formats e.g. [ '1080p', '720p', '320p' ] or a single format '1080p'. Asterix for all.
     autoload: true
 };
 
@@ -122,6 +122,7 @@ YouTubeToHtml5.prototype.applyFilters = function( name, value, ...args ) {
 /**
  * Itag enum to type string.
  *
+ * @link {https://support.google.com/youtube/answer/2853702}
  * @type {object}
  */
 YouTubeToHtml5.prototype.itagMap = {
@@ -129,22 +130,22 @@ YouTubeToHtml5.prototype.itagMap = {
     22: '720p',
     37: '1080p',
     38: '3072p',
-    82: '360p3d',
-    83: '480p3d',
-    84: '720p3d',
-    85: '1080p3d',
+    82: '360p3d', // 3D
+    83: '480p3d', // 3D
+    84: '720p3d', // 3D
+    85: '1080p3d', // 3D
     133: '240pna',
     134: '360pna',
     135: '480pna',
     136: '720pna',
     137: '1080pna',
     264: '1440pna',
-    298: '720p60',
-    299: '1080p60na',
-    160: '144pna',
-    139: '48kbps',
-    140: '128kbps',
-    141: '256kbps'
+    298: '720p60', // 60fps
+    299: '1080p60na', // 60fps
+    160: '144pna', // Audio
+    139: '48kbps', // Audio
+    140: '128kbps', // Audio
+    141: '256kbps' // Audio
 };
 
 /**
@@ -186,6 +187,25 @@ YouTubeToHtml5.prototype.fetch = function( url ) {
 }
 
 /**
+ * Get the users defined allowed formats. Defaults to all.
+ *
+ * @return {string[]}
+ */
+YouTubeToHtml5.prototype.getAllowedFormats = function() {
+    let allowedFormats = [];
+
+    if ( Array.isArray( this.options.formats ) ) {
+        allowedFormats = this.options.formats;
+    } else if ( this.itagMap[ this.options.formats ] ) {
+        allowedFormats = [ this.options.formats ];
+    } else if ( this.options.formats === '*' ) {
+        allowedFormats = Object.values( this.itagMap ).sort();
+    }
+
+    return allowedFormats;
+};
+
+/**
  * Get list of elements found with the selector.
  *
  * @param {NodeList|HTMLCollection|string} selector
@@ -219,7 +239,7 @@ YouTubeToHtml5.prototype.youtubeDataApiEndpoint = function( videoId ) {
     const hostId = ~~( Math.random() * 33 );
     const url = `https://images${hostId}-focus-opensocial.googleusercontent.com/gadgets/proxy?container=none&url=https%3A%2F%2Fwww.youtube.com%2Fget_video_info%3Fvideo_id%3D${videoId}`;
 
-    return this.applyFilters( 'youtube.api.endpoint', url, videoId, hostId );
+    return this.applyFilters( 'api.endpoint', url, videoId, hostId );
 };
 
 /**
@@ -249,44 +269,80 @@ YouTubeToHtml5.prototype.parseUriString = function( string ) {
 YouTubeToHtml5.prototype.parseYoutubeMeta = function( rawData ) {
 
     let streams = [];
-    let result = {};
+    let results = {};
 
-    let data = this.parseUriString( rawData );
-    data.player_response = JSON.parse( data.player_response );
-    data.fflags = this.parseUriString( data.fflags );
+    let response = this.parseUriString( rawData );
+    response.player_response = JSON.parse( response.player_response );
+    response.fflags = this.parseUriString( response.fflags );
 
-    // Internal API filter
-    data = this.applyFilters( 'youtube.meta', data, rawData );
+    /**
+     * Filter parsed API response.
+     *
+     * @type {object}
+     */
+    response = this.applyFilters( 'api.response', response, rawData );
 
-    // Get data from API
-    if ( data.hasOwnProperty( 'url_encoded_fmt_stream_map' ) ) {
-        streams = streams.concat( data.url_encoded_fmt_stream_map.split( ',' ).map( s => {
+    // Extract data from API, in order of priority
+    if ( response.hasOwnProperty( 'url_encoded_fmt_stream_map' ) ) {
+        streams = streams.concat( response.url_encoded_fmt_stream_map.split( ',' ).map( s => {
             return this.parseUriString( s );
         } ) );
     }
 
-    else if ( data.player_response.streamingData && data.player_response.streamingData.formats ) {
-        streams = streams.concat( data.player_response.streamingData.formats );
-    }
-
-    else if ( data.hasOwnProperty( 'adaptive_fmts' ) ) {
-        streams = streams.concat( data.adaptive_fmts.split( ',' ).map( s => {
+    else if ( response.hasOwnProperty( 'adaptive_fmts' ) ) {
+        streams = streams.concat( response.adaptive_fmts.split( ',' ).map( s => {
             return this.parseUriString( s );
         } ) );
     }
 
-    else if ( data.player_response.streamingData && data.player_response.streamingData.adaptiveFormats ) {
-        streams = streams.concat( data.player_response.streamingData.adaptiveFormats );
+    else if ( response.player_response.streamingData && response.player_response.streamingData.adaptiveFormats ) {
+        streams = streams.concat( response.player_response.streamingData.adaptiveFormats );
+    }
+
+    else if ( response.player_response.streamingData && response.player_response.streamingData.formats ) {
+        streams = streams.concat( response.player_response.streamingData.formats );
     }
 
     // Build results array
     streams.forEach( stream => {
         if ( this.itagMap[ stream.itag ] && stream.url ) {
-            result[ this.itagMap[ stream.itag ] ] = stream.url;
+            let streamType = 'unknown';
+            let streamMime = 'unknown';
+
+            // Extract stream data from mimetype.
+            if ( 'mimeType' in stream ) {
+
+                const mimeParts = stream.mimeType.match( /^(audio|video)(?:\/([^;]+);)?/i );
+
+                if ( mimeParts[ 1 ] ) {
+                    streamType = mimeParts[ 1 ];
+                }
+
+                if ( mimeParts[ 2 ] ) {
+                    streamMime = mimeParts[ 2 ];
+                }
+            }
+
+            results[ this.itagMap[ stream.itag ] ] = {
+                url: stream.url,
+                label: stream.qualityLabel || this.itagMap[ stream.itag ],
+                type: streamType,
+                mime: streamMime
+            };
         }
     } );
 
-    return result;
+    /**
+     * Apply filter filter.
+     *
+     * @param {object} results Object containing extracted results from API response.
+     * @param {object} response Parsed API response.
+     *
+     * @type {object}
+     */
+    results = this.applyFilters( 'api.results', results, response );
+
+    return results;
 };
 
 /**
@@ -309,32 +365,97 @@ YouTubeToHtml5.prototype.load = function() {
  * @param {null|string} attr Used to override default setting.
  */
 YouTubeToHtml5.prototype.loadSingle = function( element, attr = null ) {
+
+    /**
+     * Attribute name for grabbing YouTube identifier/url.
+     *
+     * @type {string}
+     */
     const attribute = attr || this.options.attribute;
+
+    // Check if element has attribute value
     if ( element.getAttribute( attribute ) ) {
+
+        /**
+         * Attempt extraction of YouTube video ID. Returns attribute value if no match.
+         *
+         * @type {string}
+         */
         const videoId = this.urlToId( element.getAttribute( attribute ) );
+
+        /**
+         * Build the request URL from YouTube ID.
+         *
+         * @type {string}
+         */
         const requestUrl = this.youtubeDataApiEndpoint( videoId );
 
+        /**
+         * Call action before request is made.
+         *
+         * @param {HTMLElement} element
+         */
         this.doAction( 'api.before', element );
 
+        /**
+         * Make the HTTP request.
+         */
         this.fetch( requestUrl ).then( response => {
+
 
             if ( response ) {
 
                 const streams = this.parseYoutubeMeta( response );
 
-                if ( streams && this.options.formats ) {
+                if ( streams ) {
 
-                    for ( let i = 0; i < this.options.formats.length; i++ ) {
-                        const format = this.options.formats[ i ];
+                    const allowedFormats = this.getAllowedFormats();
+
+                    // Select the default value.
+                    var selectedStream = null;
+                    var selectedFormat = null;
+                    for ( let i = 0; i < allowedFormats.length; i++ ) {
+                        const format = allowedFormats[ i ];
                         if ( format in streams ) {
-                            element.src = this.applyFilters( 'video.source', streams[ format ], element, format, streams );
+                            selectedStream = streams[ format ];
+                            selectedFormat = format;
                             break;
                         }
                     }
 
+                    /**
+                     * Fitler selected video stream object.
+                     *
+                     * @param {object} selectedStream Object containing url and label.
+                     * @param {HTMLElement} element Video element.
+                     * @param {string} selectedFormat Select itag value.
+                     * @param {object} streams Object of itag and stream objects.
+                     *
+                     * @type {null|object}
+                     */
+                    selectedStream = this.applyFilters( 'video.stream', selectedStream, element, selectedFormat, streams );
+
+                    /**
+                     * Fitler the selected video source string.
+                     *
+                     * @param {string} selectedSource Source stream url.
+                     * @param {object} selectedStream Stream object.
+                     * @param {HTMLElement} element Video element.
+                     * @param {string} selectedFormat Select itag value.
+                     * @param {object} streams Object of itag and stream objects.
+                     *
+                     * @type {null|string}
+                     */
+                    element.src = this.applyFilters( 'video.source', selectedStream.url, selectedStream, element, selectedFormat, streams );
                 }
             }
         } ).finally( response => {
+            /**
+             * Allways call action after request completion.
+             *
+             * @param {HTMLElement} element
+             * @param {object} response
+             */
             this.doAction( 'api.after', element, response );
         } );
 
