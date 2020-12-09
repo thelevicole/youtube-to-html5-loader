@@ -9,7 +9,15 @@
 function YouTubeToHtml5( options = {} ) {
 
     /**
+     * Create an empty local object for storing hooks.
+     *
+     * @type {object}
+     */
+    this.hooks = {};
+
+    /**
      * Create an empty object for storing options.
+     *
      * @type {object}
      */
     this.options = {};
@@ -44,12 +52,9 @@ YouTubeToHtml5.prototype.defaultOptions = {
 /**
  * Internal hooks API storage.
  *
- * @type {{filters: [], actions: []}}
+ * @type {}
  */
-YouTubeToHtml5.prototype.hooks = {
-    filters: [],
-    actions: []
-};
+YouTubeToHtml5.prototype.globalHooks = {};
 
 /**
  * Get hooks by type and name. Ordered by priority.
@@ -59,12 +64,59 @@ YouTubeToHtml5.prototype.hooks = {
  * @returns {BigUint64Array|*[]}
  */
 YouTubeToHtml5.prototype.getHooks = function( type, name ) {
-    if ( type in this.hooks ) {
-        let hooks = this.hooks[ type ].sort( ( a, b ) => a.priority - b.priority );
-        return hooks.filter( el => el.name === name );
+
+    let hooks = [];
+
+    if ( type in this.globalHooks ) {
+
+        let globalHooks = this.globalHooks[ type ];
+            globalHooks = globalHooks.filter( el => el.name === name );
+            globalHooks = globalHooks.sort( ( a, b ) => a.priority - b.priority );
+
+        hooks = hooks.concat( globalHooks );
     }
 
-    return [];
+    if ( type in this.hooks ) {
+
+        let localHooks = this.hooks[ type ];
+            localHooks = localHooks.filter( el => el.name === name );
+            localHooks = localHooks.sort( ( a, b ) => a.priority - b.priority );
+
+        hooks = hooks.concat( localHooks );
+    }
+
+    return hooks;
+};
+
+/**
+ * Get hooks by type and name. Ordered by priority.
+ *
+ * @param {string} type
+ * @param {object} hookMeta
+ */
+YouTubeToHtml5.prototype.addHook = function( type, hookMeta ) {
+
+
+    // Create new global hook type array.
+    if ( !( type in this.globalHooks ) ) {
+        this.globalHooks[ type ] = [];
+    }
+
+    // Create new local hook type array.
+    if ( !( type in this.hooks ) ) {
+        this.hooks[ type ] = [];
+    }
+
+    // Add to global.
+    if ( 'global' in hookMeta && hookMeta.global ) {
+        this.globalHooks[ type ].push( hookMeta );
+    }
+
+    // Else, add to local.
+    else {
+        this.hooks[ type ].push( hookMeta );
+    }
+
 };
 
 /**
@@ -73,12 +125,14 @@ YouTubeToHtml5.prototype.getHooks = function( type, name ) {
  * @param {string} action Name of action to trigger callback on.
  * @param {function} callback
  * @param {number} priority
+ * @param {boolean} global True if this action should apply to all instances.
  */
-YouTubeToHtml5.prototype.addAction = function( action, callback, priority = 10 ) {
-    this.hooks.actions.push( {
+YouTubeToHtml5.prototype.addAction = function( action, callback, priority = 10, global = false ) {
+    this.addHook( 'actions', {
         name: action,
         callback: callback,
-        priority: priority
+        priority: priority,
+        global: global
     } );
 };
 
@@ -101,12 +155,14 @@ YouTubeToHtml5.prototype.doAction = function( name, ...args ) {
  * @param {string} filter Name of filter to trigger callback on.
  * @param {function} callback
  * @param {number} priority
+ * @param {boolean} global True if this action should apply to all instances.
  */
-YouTubeToHtml5.prototype.addFilter = function( filter, callback, priority = 10 ) {
-    this.hooks.filters.push( {
+YouTubeToHtml5.prototype.addFilter = function( filter, callback, priority = 10, global = false ) {
+    this.addHook( 'filters', {
         name: filter,
         callback: callback,
-        priority: priority
+        priority: priority,
+        global: global
     } );
 };
 
