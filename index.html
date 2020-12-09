@@ -4,58 +4,429 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>YouTube to HTML5 video</title>
+    <title>YouTube to HTML5 video by Levi Cole</title>
+    <meta name="description" content="Load YouTube videos with the HTLML5 video element.">
+
+    <meta property="og:title" content="YouTube to HTML5 video by Levi Cole">
+    <meta property="og:site_name" content="">
+    <meta property="og:description" content="Load YouTube videos with the HTLML5 video element.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://thelevicole.com/youtube-to-html5-loader/">
+    <meta property="og:image" content="">
+
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="https://thelevicole.com/youtube-to-html5-loader/" />
+    <meta name="twitter:title" content="YouTube to HTML5 video by Levi Cole">
+    <meta name="twitter:description" content="Load YouTube videos with the HTLML5 video element.">
+    <meta name="twitter:image" content="">
+
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" integrity="sha384-TX8t27EcRE3e/ihU7zmQxVncDAy5uIKz4rEkgIXeMed4M0jlfIDPvg6uqKI2xXr2" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.22.0/themes/prism-tomorrow.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@thelevicole/youtube-to-html5-loader@3.0.0/dist/YouTubeToHtml5.min.js"></script>
     <style>
-        video.loading {
+        video.is-loading {
             opacity: 0.4;
             pointer-events: none;
+            border: 2px solid red;
         }
     </style>
 </head>
 <body>
 
-<div class="container my-5">
-    <h1 class="mb-5">YouTube to HTML5 loader</h1>
-
-    <div class="row">
-
-        <div class="col-lg-6">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <strong>Normal</strong>
-                </div>
-                <div class="card-body">
-                    <div class="embed-responsive embed-responsive-16by9">
-                        <iframe width="560" height="315" src="https://www.youtube.com/embed/ScMzIvxBSi4" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-                    </div>
-                    <code class="mt-2 p-2 bg-light border d-block">&lt;iframe src="https://www.youtube.com/embed/ScMzIvxBSi4"&gt;&lt;/iframe&gt;</code>
+<section class="py-5 bg-primary text-white">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col my-5">
+                <h1>YouTube to HTML5 loader</h1>
+                <p>Load YouTube videos with the HTLML5 <code class="bg-light py-1 px-2 rounded-sm">&lt;video&gt;</code> element.</p>
+            </div>
+            <div class="d-none d-md-block col-md-4 col-xl-3">
+                <div class="list-group">
+                    <a href="#installation" class="list-group-item">1. Installation</a>
+                    <a href="#examples" class="list-group-item">2. Examples</a>
                 </div>
             </div>
         </div>
+    </div>
+</section>
 
-        <div class="col-lg-6">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <strong>HTML5</strong>
-                </div>
-                <div class="card-body">
-                    <div class="embed-responsive embed-responsive-16by9">
-                        <video data-yt2html5="https://www.youtube.com/embed/ScMzIvxBSi4" controls></video>
+<section class="py-5 bg-light" id="installation">
+    <div class="container my-5">
+        <h2 class="mb-5 border-bottom pb-3">Installation</h2>
+
+        <p><strong>jsDeliver CDN</strong></p>
+        <div class="mb-5">
+            <pre><code class="lang-js">&lt;script src="https://cdn.jsdelivr.net/npm/@thelevicole/youtube-to-html5-loader@3.0.0/dist/YouTubeToHtml5.min.js"&gt;&lt;/script&gt;</code></pre>
+        </div>
+
+        <p><strong>NPM / Webpack</strong></p>
+        <div class="mb-5">
+            <pre><code class="lang-shell">npm i @thelevicole/youtube-to-html5-loader</code></pre>
+            <pre><code class="lang-js">const YouTubeToHtml5 = require('@thelevicole/youtube-to-html5-loader');
+new YouTubeToHtml5();</code></pre>
+        </div>
+    </div>
+</section>
+
+<section class="py-5" id="examples">
+    <div class="container my-5">
+        <h2 class="border-bottom pb-3">Examples</h2>
+        <p class="mb-5 text-muted">Be sure to use the "Run example" button for each example.</p>
+
+        <div class="row">
+            <div class="col-lg-3 mb-3">
+                <ul class="nav nav-pills flex-column sticky-top" style="top: 15px;">
+                    <li class="nav-item">
+                        <a class="nav-link active" data-toggle="tab" href="#basic-usage">Basic usage</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-toggle="tab" href="#dom-selectors">DOM selectors</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-toggle="tab" href="#loading-class">Loading class</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-toggle="tab" href="#video-quality">Video quality</a>
+                    </li>
+                </ul>
+            </div>
+            <div class="col-lg-9">
+                <div class="tab-content">
+
+                    <!-- Start : Basic usage -->
+                    <div class="tab-pane active" id="basic-usage">
+                        <div class="card">
+                            <div class="card-header d-flex flex-row justify-content-between align-items-center">
+                                <span>Basic usage</span>
+                                <button class="btn btn-success run-example">Run example</button>
+                                <script type="text/plain">
+                                    new YouTubeToHtml5({
+                                        selector: '#basic-usage video'
+                                    });
+                                </script>
+                            </div>
+                            <div class="card-body">
+                                <div class="embed-responsive embed-responsive-16by9 mb-3">
+                                    <video data-yt2html5="https://www.youtube.com/embed/SVdcj6zsch0" controls></video>
+                                </div>
+                                <p><strong>HTML:</strong></p>
+                                <pre class="mb-3"><code class="lang-html">&lt;video data-yt2html5="https://www.youtube.com/embed/SVdcj6zsch0" controls&gt;&lt;/video&gt;</code></pre>
+                                <p><strong>Javascript:</strong></p>
+                                <pre class="mb-0"><code class="lang-js">new YouTubeToHtml5();</code></pre>
+                            </div>
+                        </div>
                     </div>
-                    <code class="mt-2 p-2 bg-light border d-block">&lt;video data-yt2html5="https://www.youtube.com/embed/ScMzIvxBSi4" controls&gt;&lt;/video&gt;</code>
+                    <!-- End : Basic usage -->
+
+                    <!-- Start : Custom selectors -->
+                    <div class="tab-pane" id="dom-selectors">
+                        <div class="card">
+                            <div class="card-header d-flex flex-row justify-content-between align-items-center">
+                                <span>DOM selectors</span>
+                                <button class="btn btn-success run-example">Run example</button>
+                                <script type="text/plain">
+                                    new YouTubeToHtml5({
+                                        selector: '#dom-selectors .yt-video',
+                                        attribute: 'data-url'
+                                    });
+                                </script>
+                            </div>
+                            <div class="card-body">
+                                <div class="embed-responsive embed-responsive-16by9 mb-3">
+                                    <video class="yt-video" data-url="https://www.youtube.com/watch?v=SVdcj6zsch0" controls></video>
+                                </div>
+                                <p><strong>HTML:</strong></p>
+                                <pre class="mb-3"><code class="lang-html">&lt;video class="yt-video" data-url="https://www.youtube.com/watch?v=SVdcj6zsch0" controls&gt;&lt;/video&gt;</code></pre>
+                                <p><strong>Javascript:</strong></p>
+                                <pre class="mb-0"><code class="lang-js">new YouTubeToHtml5({
+    selector: '.yt-video',
+    attribute: 'data-url'
+});</code></pre>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- End : Custom selectors -->
+
+                    <!-- Start : Loading class -->
+                    <div class="tab-pane" id="loading-class">
+                        <div class="card">
+                            <div class="card-header d-flex flex-row justify-content-between align-items-center">
+                                <span>Loading class</span>
+                                <button class="btn btn-success run-example">Run example</button>
+                                <script type="text/plain">
+                                    var player = new YouTubeToHtml5({
+                                        selector: '#loading-class video',
+                                        autoload: false // Disable loading videos on init, `.load()` method is required.
+                                    });
+
+                                    // Add loading class to video element
+                                    player.addAction('api.before', function(element) {
+                                        element.classList.add('is-loading');
+                                    });
+
+                                    // Remove loading class after API HTTP request completes.
+                                    player.addAction('api.after', function(element) {
+                                        // Wait for video to be playable before removing the loading class
+                                        element.addEventListener('loadeddata', function() {
+                                            element.classList.remove('is-loading');
+                                        });
+                                    });
+
+                                    // Now we can load videos.
+                                    player.load();
+                                </script>
+                            </div>
+                            <div class="card-body">
+                                <div class="embed-responsive embed-responsive-16by9 mb-3">
+                                    <video data-yt2html5="https://www.youtube.com/embed/SVdcj6zsch0" controls></video>
+                                </div>
+                                <p><strong>CSS:</strong></p>
+                                <pre class="mb-3"><code class="lang-css">video.is-loading {
+    opacity: 0.4;
+    pointer-events: none;
+    border: 2px solid red;
+}</code></pre>
+                                <p><strong>HTML:</strong></p>
+                                <pre class="mb-3"><code class="lang-html">&lt;video data-yt2html5="https://www.youtube.com/embed/SVdcj6zsch0" controls&gt;&lt;/video&gt;</code></pre>
+                                <p><strong>Javascript:</strong></p>
+                                <pre class="mb-0"><code class="lang-js">var player = new YouTubeToHtml5({
+    autoload: false // Disable loading videos on init, `.load()` method is required.
+});
+
+// Add loading class to video element
+player.addAction('api.before', function(element) {
+    element.classList.add('is-loading');
+});
+
+// Remove loading class after API HTTP request completes.
+player.addAction('api.after', function(element) {
+    // Wait for video to be playable before removing the loading class
+    element.addEventListener('loadeddata', function() {
+        element.classList.remove('is-loading');
+    });
+});
+
+// Now we can load videos.
+player.load();</code></pre>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- End : Loading class -->
+
+                    <!-- Start : Video quality -->
+                    <div class="tab-pane" id="video-quality">
+                        <div class="card">
+                            <div class="card-header d-flex flex-row justify-content-between align-items-center">
+                                <span>Video quality</span>
+                                <button class="btn btn-success run-example">Run example</button>
+                                <script type="text/plain">
+                                    /**
+                                     * Get the stream quality select field.
+                                     * @type {HTMLElement}
+                                     */
+                                    const select = document.getElementById('video-quality-streams');
+
+                                    /**
+                                     * Create a new instance of the yt2html5 loader.
+                                     * @type {YouTubeToHtml5}
+                                     */
+                                    const player = new YouTubeToHtml5({
+                                        selector: '#video-quality video',
+                                        autoload: false
+                                    });
+
+                                    /**
+                                     * Run when the video source has been chosen, after the API call.
+                                     * @param {string} source The default source used for loading.
+                                     * @param {object} data The selected stream data. Includes url and label.
+                                     * @param {HTMLElement} element The video element the source will be added to.
+                                     * @param {string} format The current format/quality.
+                                     * @param {object} streams An object of avialable formats/qualities. e.g. {'360p': 'https://...'}
+                                     */
+                                    player.addFilter('video.source', function(source, data, element, format, streams) {
+
+                                        // Check if we have more than one quality/format available. Else hide select field.
+                                        if (typeof streams === 'object' && Object.keys(streams).length > 1) {
+
+                                            // Loop through each stream values available.
+                                            for (var index in streams) {
+
+                                                /**
+                                                 * Get the current iteration stream object.
+                                                 * @type {object}
+                                                 */
+                                                const stream = streams[index];
+
+                                                // Ensure the stream type is a video.
+                                                if (stream.type === 'video') {
+                                                    /**
+                                                     * Create a new blank &lt;option&gt; for appending to our select field.
+                                                     * @type {HTMLElement}
+                                                     */
+                                                    var option = document.createElement('option');
+
+                                                    // Set the value as the stream url.
+                                                    option.value = stream.url;
+
+                                                    // Create a human readable label.
+                                                    option.text = `${stream.label} (${stream.type} / ${stream.mime})`;
+
+                                                    // If this stream matches the default source, add selected property.
+                                                    if (stream.url === source) {
+                                                        option.setAttribute('selected', 'selected');
+                                                    }
+
+                                                    // Append option to select field.
+                                                    select.appendChild(option);
+                                                }
+                                            }
+
+                                            // Enable select field.
+                                            select.disabled = false;
+
+                                            // When select field changes, change the video elements source value.
+                                            select.addEventListener('change', function() {
+                                                element.src = this.value;
+                                            });
+                                        } else {
+                                            select.style.display = 'none';
+                                        }
+
+                                        // Return default source value.
+                                        return source;
+                                    });
+
+                                    // Initial load process.
+                                    player.load();
+                                </script>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-group">
+                                    <label for="video-quality-streams">Quality</label>
+                                    <select id="video-quality-streams" class="form-control" disabled autocomplete="off"></select>
+                                </div>
+                                <div class="embed-responsive embed-responsive-16by9 mb-3">
+                                    <video data-yt2html5="https://www.youtube.com/embed/SVdcj6zsch0" controls></video>
+                                </div>
+                                <p><strong>HTML:</strong></p>
+                                <pre class="mb-3"><code class="lang-html">&lt;select id="streams" disabled&gt;&lt;/select&gt;
+&lt;video data-yt2html5="https://www.youtube.com/embed/SVdcj6zsch0" controls&gt;&lt;/video&gt;</code></pre>
+                                <p><strong>Javascript:</strong></p>
+                                <pre class="mb-0"><code class="lang-js">/**
+ * Get the stream quality select field.
+ * @type {HTMLElement}
+ */
+const select = document.getElementById('streams');
+
+/**
+ * Create a new instance of the yt2html5 loader.
+ * @type {YouTubeToHtml5}
+ */
+const player = new YouTubeToHtml5({
+    autoload: false
+});
+
+/**
+ * Run when the video source has been chosen, after the API call.
+ * @param {string} source The default source used for loading.
+ * @param {object} data The selected stream data. Includes url and label.
+ * @param {HTMLElement} element The video element the source will be added to.
+ * @param {string} format The current format/quality.
+ * @param {object} streams An object of avialable formats/qualities. e.g. {'360p': 'https://...'}
+ */
+player.addFilter('video.source', function(source, data, element, format, streams) {
+
+    // Check if we have more than one quality/format available. Else hide select field.
+    if (typeof streams === 'object' && Object.keys(streams).length > 1) {
+
+        // Loop through each stream values available.
+        for (var index in streams) {
+
+            /**
+             * Get the current iteration stream object.
+             * @type {object}
+             */
+            const stream = streams[index];
+
+            // Ensure the stream type is a video.
+            if (stream.type === 'video') {
+                /**
+                 * Create a new blank &lt;option&gt; for appending to our select field.
+                 * @type {HTMLElement}
+                 */
+                var option = document.createElement('option');
+
+                // Set the value as the stream url.
+                option.value = stream.url;
+
+                // Create a human readable label.
+                option.text = `${stream.label} (${stream.type} / ${stream.mime})`;
+
+                // If this stream matches the default source, add selected property.
+                if (stream.url === source) {
+                    option.setAttribute('selected', 'selected');
+                }
+
+                // Append option to select field.
+                select.appendChild(option);
+            }
+        }
+
+        // Enable select field.
+        select.disabled = false;
+
+        // When select field changes, change the video elements source value.
+        select.addEventListener('change', function() {
+            element.src = this.value;
+        });
+    } else {
+        select.style.display = 'none';
+    }
+
+    // Return default source value.
+    return source;
+});
+
+// Initial load process.
+player.load();</code></pre>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- End : Video quality -->
+
                 </div>
             </div>
         </div>
 
     </div>
+</section>
 
-</div>
-
-<script src="https://cdn.jsdelivr.net/gh/thelevicole/youtube-to-html5-loader@1.1.1/dist/YouTubeToHtml5.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.22.0/prism.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ho+j7jyWK8fNQe+A12Hb8AhRq26LrZ/JpcUGGOn+Y7RsweNrtN/tE3MoK7ZeZDyx" crossorigin="anonymous"></script>
 <script>
-    new YouTubeToHtml5();
-</script>
+    (function($) {
+        'use strict'
 
+        $(document.body).on('click', 'button.run-example', function(event) {
+            event.preventDefault();
+            var $button = $(this);
+            var $parent = $button.parent();
+            var $script = $parent.find('script[type="text/plain"]');
+
+            var scriptOpen = '(function() {';
+            var scriptClose = '})();';
+
+            $('<script>', {
+                text: scriptOpen + $script.text() + scriptClose,
+                class: 'example-js',
+                type: 'text/javascript'
+            }).appendTo(document.body);
+
+            $button.prop('disabled', true).addClass('disabled');
+        });
+
+    })(jQuery);
+</script>
 </body>
 </html>
