@@ -46,7 +46,8 @@ YouTubeToHtml5.prototype.defaultOptions = {
     selector: 'video[data-yt2html5]',
     attribute: 'data-yt2html5',
     formats: '*', // Accepts an array of formats e.g. [ '1080p', '720p', '320p' ] or a single format '1080p'. Asterix for all.
-    autoload: true
+    autoload: true,
+    withAudio: false
 };
 
 /**
@@ -301,9 +302,10 @@ YouTubeToHtml5.prototype.getElements = function( selector ) {
  */
 YouTubeToHtml5.prototype.youtubeDataApiEndpoint = function( videoId ) {
     const hostId = ~~( Math.random() * 33 );
-    const url = `https://images${hostId}-focus-opensocial.googleusercontent.com/gadgets/proxy?container=none&url=https%3A%2F%2Fwww.youtube.com%2Fget_video_info%3Fvideo_id%3D${videoId}`;
+    const url = encodeURIComponent( `https://www.youtube.com/get_video_info?video_id=${videoId}&el=embedded&hl=en_US` );
+    const proxy = `https://images${hostId}-focus-opensocial.googleusercontent.com/gadgets/proxy?container=none&url=${url}`;
 
-    return this.applyFilters( 'api.endpoint', url, videoId, hostId );
+    return this.applyFilters( 'api.endpoint', proxy, videoId, hostId );
 };
 
 /**
@@ -325,15 +327,37 @@ YouTubeToHtml5.prototype.parseUriString = function( string ) {
 };
 
 /**
+ * Check if a given mime type can be played by the browser.
+ *
+ * @link https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/canPlayType
+ * @param {string} type For example "video/mp4"
+ * @return {CanPlayTypeResult|string} probably, maybe, no, unkown
+ */
+YouTubeToHtml5.prototype.canPlayType = function( type) {
+
+    var phantomEl = null;
+
+    if ( /^audio/i.test( type ) ) {
+        phantomEl = document.createElement( 'audio' );
+    } else {
+        phantomEl = document.createElement( 'video' );
+    }
+
+    const value = phantomEl && typeof phantomEl.canPlayType === 'function' ? phantomEl.canPlayType( type ) : 'unknown';
+
+    return value ? value : 'no';
+}
+
+/**
  * Parse raw YouTube response into usable data.
  *
  * @param rawData
- * @returns {object}
+ * @returns {array}
  */
 YouTubeToHtml5.prototype.parseYoutubeMeta = function( rawData ) {
 
     let streams = [];
-    let results = {};
+    let results = [];
 
     let response = this.parseUriString( rawData );
     response.player_response = JSON.parse( response.player_response );
@@ -353,46 +377,77 @@ YouTubeToHtml5.prototype.parseYoutubeMeta = function( rawData ) {
         } ) );
     }
 
-    else if ( response.hasOwnProperty( 'adaptive_fmts' ) ) {
+    if ( response.player_response.streamingData && response.player_response.streamingData.formats ) {
+        streams = streams.concat( response.player_response.streamingData.formats );
+    }
+
+    if ( response.hasOwnProperty( 'adaptive_fmts' ) ) {
         streams = streams.concat( response.adaptive_fmts.split( ',' ).map( s => {
             return this.parseUriString( s );
         } ) );
     }
 
-    else if ( response.player_response.streamingData && response.player_response.streamingData.adaptiveFormats ) {
+    if ( response.player_response.streamingData && response.player_response.streamingData.adaptiveFormats ) {
         streams = streams.concat( response.player_response.streamingData.adaptiveFormats );
-    }
-
-    else if ( response.player_response.streamingData && response.player_response.streamingData.formats ) {
-        streams = streams.concat( response.player_response.streamingData.formats );
     }
 
     // Build results array
     streams.forEach( stream => {
-        if ( this.itagMap[ stream.itag ] && stream.url ) {
-            let streamType = 'unknown';
-            let streamMime = 'unknown';
+
+        if ( stream && 'itag' in stream && this.itagMap[ stream.itag ] ) {
+            let thisData = {
+                _raw: stream,
+                itag: stream.itag,
+                url: null,
+                label: null,
+                type: 'unknown',
+                mime: 'unknown',
+                hasAudio: false,
+                browserSupport: 'unknown'
+            };
+
+            // Extract url from stream.
+            if ( 'url' in stream && stream.url ) {
+                thisData.url = stream.url;
+            } else if ( 'signatureCipher' in stream ) {
+                // @todo decode cipher and append to url
+            }
+
+            // Set simple flag if source has audio
+            if ( 'audioQuality' in stream && stream.audioQuality ) {
+                thisData.hasAudio = true;
+            }
+
+            // Extract stream label.
+            if ( 'qualityLabel' in stream && stream.qualityLabel ) {
+                thisData.label = stream.qualityLabel;
+            } else {
+                thisData.label = this.itagMap[ stream.itag ];
+            }
 
             // Extract stream data from mimetype.
             if ( 'mimeType' in stream ) {
 
                 const mimeParts = stream.mimeType.match( /^(audio|video)(?:\/([^;]+);)?/i );
 
+                // Set media type (video, audo)
                 if ( mimeParts[ 1 ] ) {
-                    streamType = mimeParts[ 1 ];
+                    thisData.type = mimeParts[ 1 ];
                 }
 
+                // Set media mime (mp4, ogg...etc)
                 if ( mimeParts[ 2 ] ) {
-                    streamMime = mimeParts[ 2 ];
+                    thisData.mime = mimeParts[ 2 ];
                 }
+
+                // Set browser support rating
+                thisData.browserSupport = this.canPlayType( `${thisData.type}/${thisData.mime}` );
             }
 
-            results[ this.itagMap[ stream.itag ] ] = {
-                url: stream.url,
-                label: stream.qualityLabel || this.itagMap[ stream.itag ],
-                type: streamType,
-                mime: streamMime
-            };
+            // Only add to results if url exits
+            if ( thisData.url ) {
+                results.push( thisData );
+            }
         }
     } );
 
@@ -469,9 +524,33 @@ YouTubeToHtml5.prototype.loadSingle = function( element, attr = null ) {
 
             if ( response ) {
 
-                const streams = this.parseYoutubeMeta( response );
+                let streams = this.parseYoutubeMeta( response );
 
-                if ( streams ) {
+                if ( streams && Array.isArray( streams ) ) {
+
+                    // Limit to element tag name (video/audio)
+                    streams = streams.filter( function( item ) {
+                        return item.type === element.tagName.toLowerCase();
+                    } );
+
+                    // Sort streams by playability
+                    streams.sort( function( a, b ) {
+                        const sortVals = {
+                            'unknown': -1,
+                            'no': -1,
+                            'maybe': 0,
+                            'probably': 1
+                        };
+
+                        return sortVals[ a.browserSupport ] + sortVals[ b.browserSupport ];
+                    } );
+
+                    // Only return streams with audio
+                    if ( this.options.withAudio ) {
+                        streams = streams.filter( function( item ) {
+                            return item.hasAudio;
+                        } );
+                    }
 
                     const allowedFormats = this.getAllowedFormats();
 
@@ -479,9 +558,15 @@ YouTubeToHtml5.prototype.loadSingle = function( element, attr = null ) {
                     var selectedStream = null;
                     var selectedFormat = null;
                     for ( let i = 0; i < allowedFormats.length; i++ ) {
+
                         const format = allowedFormats[ i ];
-                        if ( format in streams ) {
-                            selectedStream = streams[ format ];
+
+                        const search = streams.filter( item => {
+                            return this.itagMap[ item.itag ] === format;
+                        } );
+
+                        if ( search && search.length ) {
+                            selectedStream = search.shift();
                             selectedFormat = format;
                             break;
                         }
@@ -499,8 +584,21 @@ YouTubeToHtml5.prototype.loadSingle = function( element, attr = null ) {
                      */
                     selectedStream = this.applyFilters( 'video.stream', selectedStream, element, selectedFormat, streams );
 
+                    let domAttrs = {
+                        src: '',
+                        type: ''
+                    };
+
+                    if ( selectedStream && 'url' in selectedStream && selectedStream.url ) {
+                        domAttrs.src = selectedStream.url;
+                    }
+
+                    if ( selectedStream.type && selectedStream.type !== 'unknown' && selectedStream.mime && selectedStream.mime !== 'unknown' ) {
+                        domAttrs.type = `${selectedStream.type}/${selectedStream.mime}`;
+                    }
+
                     /**
-                     * Fitler the selected video source string.
+                     * Apply fitler for the selected video source string.
                      *
                      * @param {string} selectedSource Source stream url.
                      * @param {object} selectedStream Stream object.
@@ -510,7 +608,18 @@ YouTubeToHtml5.prototype.loadSingle = function( element, attr = null ) {
                      *
                      * @type {null|string}
                      */
-                    element.src = this.applyFilters( 'video.source', selectedStream.url, selectedStream, element, selectedFormat, streams );
+                    domAttrs.src = this.applyFilters( 'video.source', domAttrs.src, selectedStream, element, selectedFormat, streams );
+
+                    // Only add source if not empty
+                    if ( domAttrs.src && typeof domAttrs.src.toString === 'function' && domAttrs.src.toString().length ) {
+                        element.src = domAttrs.src;
+
+                        if ( domAttrs.type && domAttrs.type.length ) {
+                            element.type = domAttrs.type;
+                        }
+                    } else {
+                        console.warn( `YouTubeToHtml5 unable to load video for ID: ${videoId}` );
+                    }
                 }
             }
         } ).finally( response => {
