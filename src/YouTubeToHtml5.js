@@ -301,11 +301,8 @@ YouTubeToHtml5.prototype.getElements = function( selector ) {
  * @returns {string}
  */
 YouTubeToHtml5.prototype.youtubeDataApiEndpoint = function( videoId ) {
-    const hostId = ~~( Math.random() * 33 );
-    const url = encodeURIComponent( `https://www.youtube.com/get_video_info?video_id=${videoId}&el=embedded&hl=en_US` );
-    const proxy = `https://images${hostId}-focus-opensocial.googleusercontent.com/gadgets/proxy?container=none&url=${url}`;
-
-    return this.applyFilters( 'api.endpoint', proxy, videoId, hostId );
+    const proxy = `https://yt2html5.com/?id=${videoId}`;
+    return this.applyFilters( 'api.endpoint', proxy, videoId, null );
 };
 
 /**
@@ -359,9 +356,15 @@ YouTubeToHtml5.prototype.parseYoutubeMeta = function( rawData ) {
     let streams = [];
     let results = [];
 
-    let response = this.parseUriString( rawData );
-    response.player_response = JSON.parse( response.player_response );
-    response.fflags = this.parseUriString( response.fflags );
+    if ( typeof rawData === 'string' ) {
+        try {
+            rawData = JSON.parse( rawData );
+        } catch ( error ) {
+            return null;
+        }
+    }
+
+    let response = rawData.data || {};
 
     /**
      * Filter parsed API response.
