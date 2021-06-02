@@ -1,5 +1,6 @@
 # Load YoutTube videos as HTML5 emebed element
 
+[![](https://data.jsdelivr.com/v1/package/npm/@thelevicole/youtube-to-html5-loader/badge)](https://www.jsdelivr.com/package/npm/@thelevicole/youtube-to-html5-loader)
 [![Latest Stable Version](https://img.shields.io/npm/v/@thelevicole/youtube-to-html5-loader)](https://www.npmjs.com/package/@thelevicole/youtube-to-html5-loader)
 [![Total Downloads](https://img.shields.io/npm/dt/@thelevicole/youtube-to-html5-loader)](https://www.npmjs.com/package/@thelevicole/youtube-to-html5-loader)
   
