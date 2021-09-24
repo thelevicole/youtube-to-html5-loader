@@ -1,643 +1,442 @@
-'use strict';
+class YouTubeToHtml5 {
 
-/**
- * Embed a YouTube video as an HTML5 <video> element.
- *
- * @param {object} options
- * @constructor
- */
-function YouTubeToHtml5( options = {} ) {
+    static globalHooks = {};
+
+    static defaultOptions = {
+        endpoint: 'https://yt2html5.com/?id=',
+        selector: 'video[data-yt2html5]',
+        attribute: 'data-yt2html5',
+        formats: '*', // Accepts an array of formats e.g. [ '1080p', '720p', '320p' ] or a single format '1080p'. Asterix for all.
+        autoload: true,
+        withAudio: false,
+        withVideo: true
+    }
+
+    class = YouTubeToHtml5;
+    options = {};
+    hooks = {};
 
     /**
-     * Create an empty local object for storing hooks.
-     *
-     * @type {object}
+     * @param {object} options
      */
-    this.hooks = {};
+    constructor(options) {
+        this.options = options;
 
-    /**
-     * Create an empty object for storing options.
-     *
-     * @type {object}
-     */
-    this.options = {};
+        this.addAction('load.success', this.class._actionLoadSuccess, 0);
+        this.addAction('load.failed', this.class._actionLoadFailed, 0);
 
-    // Basic option setting.
-    for ( var key in this.defaultOptions ) {
-        if ( key in options ) {
-            this.options[ key ] = options[ key ];
-        } else {
-            this.options[ key ] = this.defaultOptions[ key ];
+        if (this.getOption('autoload')) {
+            this.load();
         }
     }
 
-    // Run on init
-    if ( this.options.autoload ) {
-        this.load();
-    }
-}
+    /**
+     * Get a user or default option.
+     * @param {string} name
+     * @param defaultValue
+     * @returns {*}
+     */
+    getOption(name, defaultValue) {
+        if (!defaultValue && name in this.class.defaultOptions) {
+            defaultValue = this.class.defaultOptions[name];
+        }
 
-/**
- * Default settable options.
- *
- * @type {object}
- */
-YouTubeToHtml5.prototype.defaultOptions = {
-    selector: 'video[data-yt2html5]',
-    attribute: 'data-yt2html5',
-    formats: '*', // Accepts an array of formats e.g. [ '1080p', '720p', '320p' ] or a single format '1080p'. Asterix for all.
-    autoload: true,
-    withAudio: false
-};
+        var value = name in this.options ? this.options[name] : defaultValue;
 
-/**
- * Internal hooks API storage.
- *
- * @type {}
- */
-YouTubeToHtml5.prototype.globalHooks = {};
+        /**
+         * Apply value filters to all regardless of option name.
+         * @example instance.addFilter('option', function(value, name) { return value + 500; });
+         */
+        value = this.applyFilters(`option`, value, name );
 
-/**
- * Get hooks by type and name. Ordered by priority.
- *
- * @param {string} type
- * @param {string} name
- * @returns {BigUint64Array|*[]}
- */
-YouTubeToHtml5.prototype.getHooks = function( type, name ) {
+        /**
+         * Apply value filters to option named only.
+         * @example instance.addFilter('setting.delay', function(value) { return value + 500; });
+         */
+        value = this.applyFilters(`option.${name}`, value );
 
-    let hooks = [];
-
-    if ( type in this.globalHooks ) {
-
-        let globalHooks = this.globalHooks[ type ];
-            globalHooks = globalHooks.filter( el => el.name === name );
-            globalHooks = globalHooks.sort( ( a, b ) => a.priority - b.priority );
-
-        hooks = hooks.concat( globalHooks );
+        return value;
     }
 
-    if ( type in this.hooks ) {
+    /**
+     * Get hooks by type and name. Ordered by priority.
+     * @param {string} type
+     * @param {string} name
+     * @returns {array}
+     */
+    getHooks(type, name) {
+        let hooks = [];
 
-        let localHooks = this.hooks[ type ];
-            localHooks = localHooks.filter( el => el.name === name );
-            localHooks = localHooks.sort( ( a, b ) => a.priority - b.priority );
+        if (type in this.class.globalHooks) {
+            let globalHooks = this.class.globalHooks[type];
+            globalHooks = globalHooks.filter(el => el.name === name);
+            globalHooks = globalHooks.sort((a, b) => a.priority - b.priority);
+            hooks = hooks.concat(globalHooks);
+        }
 
-        hooks = hooks.concat( localHooks );
+        if (type in this.hooks) {
+            let localHooks = this.hooks[ type ];
+            localHooks = localHooks.filter(el => el.name === name);
+            localHooks = localHooks.sort((a, b) => a.priority - b.priority);
+            hooks = hooks.concat(localHooks);
+        }
+
+        return hooks;
     }
 
-    return hooks;
-};
+    /**
+     * Register a hook.
+     * @param {string} type
+     * @param {object} hookMeta
+     */
+    addHook(type, hookMeta) {
 
-/**
- * Get hooks by type and name. Ordered by priority.
- *
- * @param {string} type
- * @param {object} hookMeta
- */
-YouTubeToHtml5.prototype.addHook = function( type, hookMeta ) {
+        // Create new global hook type array.
+        if (!(type in this.class.globalHooks)) {
+            this.class.globalHooks[type] = [];
+        }
 
+        // Create new local hook type array.
+        if (!(type in this.hooks)) {
+            this.hooks[type] = [];
+        }
 
-    // Create new global hook type array.
-    if ( !( type in this.globalHooks ) ) {
-        this.globalHooks[ type ] = [];
+        // Add to global.
+        if ('global' in hookMeta && hookMeta.global) {
+            this.class.globalHooks[type].push(hookMeta);
+        }
+
+        // Else, add to local.
+        else {
+            this.hooks[type].push(hookMeta);
+        }
+
     }
 
-    // Create new local hook type array.
-    if ( !( type in this.hooks ) ) {
-        this.hooks[ type ] = [];
+    /**
+     * Add action callback.
+     * @param {string} action Name of action to trigger callback on.
+     * @param {function} callback
+     * @param {number} priority
+     * @param {boolean} global True if this action should apply to all instances.
+     */
+    addAction(action, callback, priority = 10, global = false) {
+        this.addHook('actions', {
+            name: action,
+            callback: callback,
+            priority: priority,
+            global: global
+        });
     }
 
-    // Add to global.
-    if ( 'global' in hookMeta && hookMeta.global ) {
-        this.globalHooks[ type ].push( hookMeta );
+    /**
+     * Trigger an action.
+     * @param {string} name Name of action to run.
+     * @param {*} args Arguments passed to the callback function.
+     */
+    doAction(name, ...args) {
+        this.getHooks('actions', name).forEach(hook => {
+            hook.callback(this, ...args);
+        });
     }
 
-    // Else, add to local.
-    else {
-        this.hooks[ type ].push( hookMeta );
+    /**
+     * Register filter.
+     * @param {string} filter Name of filter to trigger callback on.
+     * @param {function} callback
+     * @param {number} priority
+     * @param {boolean} global True if this action should apply to all instances.
+     */
+    addFilter(filter, callback, priority = 10, global = false) {
+        this.addHook('filters', {
+            name: filter,
+            callback: callback,
+            priority: priority,
+            global: global
+        });
     }
 
-};
-
-/**
- * Add event lister.
- *
- * @param {string} action Name of action to trigger callback on.
- * @param {function} callback
- * @param {number} priority
- * @param {boolean} global True if this action should apply to all instances.
- */
-YouTubeToHtml5.prototype.addAction = function( action, callback, priority = 10, global = false ) {
-    this.addHook( 'actions', {
-        name: action,
-        callback: callback,
-        priority: priority,
-        global: global
-    } );
-};
-
-/**
- * Trigger an action.
- *
- * @param {string} name Name of action to run.
- * @param {*} args Arguments passed to the callback function.
- */
-YouTubeToHtml5.prototype.doAction = function( name, ...args ) {
-    const hooks = this.getHooks( 'actions', name );
-    for ( let i = 0; i < hooks.length; i++ ) {
-        hooks[ i ].callback( ...args );
-    }
-};
-
-/**
- * Register filter.
- *
- * @param {string} filter Name of filter to trigger callback on.
- * @param {function} callback
- * @param {number} priority
- * @param {boolean} global True if this action should apply to all instances.
- */
-YouTubeToHtml5.prototype.addFilter = function( filter, callback, priority = 10, global = false ) {
-    this.addHook( 'filters', {
-        name: filter,
-        callback: callback,
-        priority: priority,
-        global: global
-    } );
-};
-
-/**
- * Apply all named filters to a value.
- *
- * @param {string} name Name of action to run.
- * @param {*} value The value to be mutated.
- * @param {*} args Arguments passed to the callback function.
- * @returns {*}
- */
-YouTubeToHtml5.prototype.applyFilters = function( name, value, ...args ) {
-    const hooks = this.getHooks( 'filters', name );
-    for ( let i = 0; i < hooks.length; i++ ) {
-        value = hooks[ i ].callback( value, ...args );
+    /**
+     * Apply all named filters to a value.
+     * @param {string} name Name of action to run.
+     * @param {*} value The value to be mutated.
+     * @param {*} args Arguments passed to the callback function.
+     * @returns {*}
+     */
+    applyFilters(name, value, ...args) {
+        this.getHooks('filters', name).forEach(hook => {
+            value = hook.callback(this, value, ...args);
+        });
+        return value;
     }
 
-    return value;
-};
+    /**
+     * Extract the Youtube ID from a URL. Returns full value if no matches.
+     * @param {string} url
+     * @returns {string}
+     */
+    urlToId(url) {
+        const regex = /^(?:http(?:s)?:\/\/)?(?:www\.)?(?:m\.)?(?:youtu\.be\/|(?:(?:youtube-nocookie\.com\/|youtube\.com\/)(?:(?:watch)?\?(?:.*&)?v(?:i)?=|(?:embed|v|vi|user)\/)))([a-zA-Z0-9\-_]*)/;
+        const matches = url.match(regex);
+        return Array.isArray(matches) && matches[1] ? matches[1] : url;
+    }
 
-/**
- * Itag enum to type string.
- *
- * @link {https://support.google.com/youtube/answer/2853702}
- * @type {object}
- */
-YouTubeToHtml5.prototype.itagMap = {
-    18: '360p',
-    22: '720p',
-    37: '1080p',
-    38: '3072p',
-    82: '360p3d', // 3D
-    83: '480p3d', // 3D
-    84: '720p3d', // 3D
-    85: '1080p3d', // 3D
-    133: '240pna',
-    134: '360pna',
-    135: '480pna',
-    136: '720pna',
-    137: '1080pna',
-    264: '1440pna',
-    298: '720p60', // 60fps
-    299: '1080p60na', // 60fps
-    160: '144pna', // Audio
-    139: '48kbps', // Audio
-    140: '128kbps', // Audio
-    141: '256kbps' // Audio
-};
+    /**
+     * Get list of elements found with the selector.
+     * @param {NodeList|HTMLCollection|string} selector
+     * @returns {array}
+     */
+    getElements(selector) {
+        var elements = null;
 
-/**
- * Extract the Youtube ID from a URL.
- *
- * @param {string} url
- * @returns {string}
- */
-YouTubeToHtml5.prototype.urlToId = function( url ) {
-    const regex = /^(?:http(?:s)?:\/\/)?(?:www\.)?(?:m\.)?(?:youtu\.be\/|(?:(?:youtube-nocookie\.com\/|youtube\.com\/)(?:(?:watch)?\?(?:.*&)?v(?:i)?=|(?:embed|v|vi|user)\/)))([a-zA-Z0-9\-_]*)/;
-    const matches = url.match( regex );
-    return Array.isArray( matches ) && matches[ 1 ] ? matches[ 1 ] : url;
-};
-
-/**
- * Basic GET ajax request.
- *
- * @param url
- * @returns {Promise}
- */
-YouTubeToHtml5.prototype.fetch = function( url ) {
-    return new Promise( ( accept, reject ) => {
-        var request = new XMLHttpRequest();
-        request.open( 'GET', url, true );
-
-        request.onreadystatechange = function() {
-            if ( this.readyState === 4 ) {
-                if ( this.status >= 200 && this.status < 400 ) {
-                    accept( this.responseText );
-                } else {
-                    reject( this );
-                }
+        if (selector) {
+            if (NodeList.prototype.isPrototypeOf(selector) || HTMLCollection.prototype.isPrototypeOf(selector)) {
+                elements = selector;
+            } else if (typeof selector === 'object' && 'nodeType' in selector && selector.nodeType) {
+                elements = [selector];
+            } else {
+                elements = document.querySelectorAll(this.getOption('selector'));
             }
-        };
-
-        request.send();
-        request = null;
-    } );
-}
-
-/**
- * Get the users defined allowed formats. Defaults to all.
- *
- * @return {string[]}
- */
-YouTubeToHtml5.prototype.getAllowedFormats = function() {
-    let allowedFormats = [];
-
-    if ( Array.isArray( this.options.formats ) ) {
-        allowedFormats = this.options.formats;
-    } else if ( this.itagMap[ this.options.formats ] ) {
-        allowedFormats = [ this.options.formats ];
-    } else if ( this.options.formats === '*' ) {
-        allowedFormats = Object.values( this.itagMap ).sort();
-    }
-
-    return allowedFormats;
-};
-
-/**
- * Get list of elements found with the selector.
- *
- * @param {NodeList|HTMLCollection|string} selector
- * @returns {array}
- */
-YouTubeToHtml5.prototype.getElements = function( selector ) {
-    var elements = null;
-
-    if ( selector ) {
-        if ( NodeList.prototype.isPrototypeOf( selector ) || HTMLCollection.prototype.isPrototypeOf( selector ) ) {
-            elements = selector;
-        } else if ( typeof selector === 'object' && 'nodeType' in selector && selector.nodeType ) {
-            elements = [ selector ];
-        } else {
-            elements = document.querySelectorAll( this.options.selector );
         }
+
+        elements = Array.from(elements || '');
+
+        return this.applyFilters('elements', elements);
     }
-
-    elements = Array.from( elements || '' );
-
-    return this.applyFilters( 'elements', elements );
-};
-
-/**
- * Build API url from video id.
- *
- * @param {string} videoId
- * @returns {string}
- */
-YouTubeToHtml5.prototype.youtubeDataApiEndpoint = function( videoId ) {
-    const proxy = `https://yt2html5.com/?id=${videoId}`;
-    return this.applyFilters( 'api.endpoint', proxy, videoId, null );
-};
-
-/**
- * Parse URI encoded string.
- *
- * @param {string} string
- * @returns {array}
- */
-YouTubeToHtml5.prototype.parseUriString = function( string ) {
-    return string.split( '&' ).reduce( function( params, param ) {
-        const paramParts = param.split( '=' ).map( function( value ) {
-            return decodeURIComponent( value.replace( '+', ' ' ) );
-        } );
-
-        params[ paramParts[ 0 ] ] = paramParts[ 1 ];
-
-        return params;
-    }, {} );
-};
-
-/**
- * Check if a given mime type can be played by the browser.
- *
- * @link https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/canPlayType
- * @param {string} type For example "video/mp4"
- * @return {CanPlayTypeResult|string} probably, maybe, no, unkown
- */
-YouTubeToHtml5.prototype.canPlayType = function( type) {
-
-    var phantomEl = null;
-
-    if ( /^audio/i.test( type ) ) {
-        phantomEl = document.createElement( 'audio' );
-    } else {
-        phantomEl = document.createElement( 'video' );
-    }
-
-    const value = phantomEl && typeof phantomEl.canPlayType === 'function' ? phantomEl.canPlayType( type ) : 'unknown';
-
-    return value ? value : 'no';
-}
-
-/**
- * Parse raw YouTube response into usable data.
- *
- * @param rawData
- * @returns {array}
- */
-YouTubeToHtml5.prototype.parseYoutubeMeta = function( rawData ) {
-
-    let streams = [];
-    let results = [];
-
-    if ( typeof rawData === 'string' ) {
-        try {
-            rawData = JSON.parse( rawData );
-        } catch ( error ) {
-            return null;
-        }
-    }
-
-    let response = rawData.data || {};
 
     /**
-     * Filter parsed API response.
-     *
-     * @type {object}
+     * Build API url from video id.
+     * @param {string} videoId
+     * @returns {string}
      */
-    response = this.applyFilters( 'api.response', response, rawData );
-
-    // Extract data from API, in order of priority
-    if ( response.hasOwnProperty( 'url_encoded_fmt_stream_map' ) ) {
-        streams = streams.concat( response.url_encoded_fmt_stream_map.split( ',' ).map( s => {
-            return this.parseUriString( s );
-        } ) );
+    requestUrl(videoId) {
+        const endpoint = this.getOption('endpoint');
+        const url = endpoint + videoId;
+        return this.applyFilters('request.url', url, endpoint, videoId);
     }
 
-    if ( response.player_response.streamingData && response.player_response.streamingData.formats ) {
-        streams = streams.concat( response.player_response.streamingData.formats );
+    /**
+     * Sort formats by a list of functions.
+     *
+     * @param {object} a
+     * @param {object} b
+     * @param {function[]} processors
+     * @returns {number}
+     */
+    bulkSortBy(a, b, processors) {
+        let result = 0;
+
+        for (let fn of processors) {
+            const diff = fn(b) - fn(a);
+            result += diff;
+        }
+
+        return result;
     }
 
-    if ( response.hasOwnProperty( 'adaptive_fmts' ) ) {
-        streams = streams.concat( response.adaptive_fmts.split( ',' ).map( s => {
-            return this.parseUriString( s );
-        } ) );
-    }
+    /**
+     * Get stream data from API response.
+     * @param {object} response
+     * @returns {array}
+     */
+    getStreamData(response) {
+        const data = response?.data || {};
 
-    if ( response.player_response.streamingData && response.player_response.streamingData.adaptiveFormats ) {
-        streams = streams.concat( response.player_response.streamingData.adaptiveFormats );
-    }
+        let streams = [];
 
-    // Build results array
-    streams.forEach( stream => {
-
-        if ( stream && 'itag' in stream && this.itagMap[ stream.itag ] ) {
+        // Build streams array
+        Array.from(data.formats || '').forEach(stream => {
             let thisData = {
                 _raw: stream,
                 itag: stream.itag,
-                url: null,
-                label: null,
+                url: stream.url,
+                format: stream.qualityLabel,
                 type: 'unknown',
                 mime: 'unknown',
-                hasAudio: false,
+                hasAudio: stream.hasAudio,
+                hasVideo: stream.hasVideo,
                 browserSupport: 'unknown'
             };
 
-            // Extract url from stream.
-            if ( 'url' in stream && stream.url ) {
-                thisData.url = stream.url;
-            } else if ( 'signatureCipher' in stream ) {
-                // @todo decode cipher and append to url
-            }
-
-            // Set simple flag if source has audio
-            if ( 'audioQuality' in stream && stream.audioQuality ) {
-                thisData.hasAudio = true;
-            }
-
-            // Extract stream label.
-            if ( 'qualityLabel' in stream && stream.qualityLabel ) {
-                thisData.label = stream.qualityLabel;
-            } else {
-                thisData.label = this.itagMap[ stream.itag ];
+            if (!thisData.format) {
+                // Add audio format fallback
+                if (thisData.hasAudio && !thisData.hasVideo) {
+                    thisData.format = `${stream.audioBitrate}kbps`;
+                }
             }
 
             // Extract stream data from mimetype.
-            if ( 'mimeType' in stream ) {
+            if ('mimeType' in stream) {
 
-                const mimeParts = stream.mimeType.match( /^(audio|video)(?:\/([^;]+);)?/i );
+                const mimeParts = stream.mimeType.match(/^(audio|video)(?:\/([^;]+);)?/i);
 
                 // Set media type (video, audo)
-                if ( mimeParts[ 1 ] ) {
+                if (mimeParts[1]) {
                     thisData.type = mimeParts[ 1 ];
                 }
 
                 // Set media mime (mp4, ogg...etc)
-                if ( mimeParts[ 2 ] ) {
-                    thisData.mime = mimeParts[ 2 ];
+                if (mimeParts[2]) {
+                    thisData.mime = mimeParts[2];
                 }
 
                 // Set browser support rating
-                thisData.browserSupport = this.canPlayType( `${thisData.type}/${thisData.mime}` );
+                thisData.browserSupport = this.canPlayType(`${thisData.type}/${thisData.mime}`);
             }
 
-            // Only add to results if url exits
-            if ( thisData.url ) {
-                results.push( thisData );
-            }
+            streams.push(thisData);
+        });
+
+        // Sort streams by playability and quality
+        streams.sort((a, b) => {
+            return this.bulkSortBy(a, b, [
+                format => {
+                    return {
+                        'unknown': -1,
+                        'no': -1,
+                        'maybe': 0,
+                        'probably': 1
+                    }[format.browserSupport];
+                },
+                format => +!!format._raw.isHLS,
+                format => +!!format._raw.isDashMPD,
+                format => +(format._raw.contentLength > 0),
+                format => +(format.hasVideo && format.hasAudio),
+                format => +format.hasVideo,
+                format => parseInt(format.format) || 0,
+                format => format._raw.bitrate || 0,
+                format => format._raw.audioBitrate || 0,
+                format => [
+                    'mp4v',
+                    'avc1',
+                    'Sorenson H.283',
+                    'MPEG-4 Visual',
+                    'VP8',
+                    'VP9',
+                    'H.264',
+                ].findIndex(encoding => format._raw.codecs && format._raw.codecs.includes(encoding)),
+                format => [
+                    'mp4a',
+                    'mp3',
+                    'vorbis',
+                    'aac',
+                    'opus',
+                    'flac',
+                ].findIndex(encoding => format._raw.codecs && format._raw.codecs.includes(encoding))
+            ]);
+        });
+
+        // Only return streams with audio
+        if (this.getOption('withAudio')) {
+            streams = streams.filter(item => item.hasAudio);
         }
-    } );
 
-    /**
-     * Apply filter filter.
-     *
-     * @param {object} results Object containing extracted results from API response.
-     * @param {object} response Parsed API response.
-     *
-     * @type {object}
-     */
-    results = this.applyFilters( 'api.results', results, response );
+        // Only return streams with video
+        if (this.getOption('withVideo')) {
+            streams = streams.filter(item => item.hasVideo);
+        }
 
-    return results;
-};
+        const allowedFormats = this.getOption('formats');
 
-/**
- * Run our full process. Loops through each element matching the selector.
- */
-YouTubeToHtml5.prototype.load = function() {
-    const elements = this.getElements( this.options.selector );
+        // Filter streams further by allowed formats.
+        if (allowedFormats !== '*') {
+            streams = streams.filter(item => Array.from(allowedFormats).includes(item.format));
+        }
 
-    if ( elements && elements.length ) {
-        elements.forEach( element => {
-            this.loadSingle( element );
-        } );
+        return streams;
     }
-};
-
-/**
- * Process a single element.
- *
- * @param {Element} element
- * @param {null|string} attr Used to override default setting.
- */
-YouTubeToHtml5.prototype.loadSingle = function( element, attr = null ) {
 
     /**
-     * Attribute name for grabbing YouTube identifier/url.
-     *
-     * @type {string}
+     * Check if a given mime type can be played by the browser.
+     * @link https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/canPlayType
+     * @param {string} type For example "video/mp4"
+     * @returns {CanPlayTypeResult|string} probably, maybe, no, unkown
      */
-    const attribute = attr || this.options.attribute;
+    canPlayType(type) {
 
-    // Check if element has attribute value
-    if ( element.getAttribute( attribute ) ) {
+        var phantomEl;
+
+        if (/^audio/i.test(type)) {
+            phantomEl = document.createElement('audio');
+        } else {
+            phantomEl = document.createElement('video');
+        }
+
+        const value = phantomEl && typeof phantomEl.canPlayType === 'function' ? phantomEl.canPlayType(type) : 'unknown';
+
+        return value ? value : 'no';
+    }
+
+    /**
+     * Run our full process. Loops through each element matching the selector.
+     */
+    load() {
+        const elements = this.getElements(this.getOption('selector'));
+
+        if (elements && elements.length) {
+            elements.forEach(element => this.loadSingle(element) );
+        }
+    }
+
+    /**
+     * Process a single element.
+     * @param {Element} element
+     */
+    loadSingle(element) {
 
         /**
-         * Attempt extraction of YouTube video ID. Returns attribute value if no match.
+         * Attribute name for grabbing YouTube identifier/url.
          *
          * @type {string}
          */
-        const videoId = this.urlToId( element.getAttribute( attribute ) );
+        const attribute = this.getOption('attribute');
 
-        /**
-         * Build the request URL from YouTube ID.
-         *
-         * @type {string}
-         */
-        const requestUrl = this.youtubeDataApiEndpoint( videoId );
+        // Check if element has attribute value
+        if (element.getAttribute(attribute)) {
 
-        /**
-         * Call action before request is made.
-         *
-         * @param {HTMLElement} element
-         */
-        this.doAction( 'api.before', element );
+            // Extract video id from attribute value.
+            const videoId = this.urlToId(element.getAttribute(attribute));
 
-        /**
-         * Make the HTTP request.
-         */
-        this.fetch( requestUrl ).then( response => {
+            // Build request url.
+            const requestUrl = this.requestUrl(videoId);
 
+            this.doAction('load.before', element);
 
-            if ( response ) {
-
-                let streams = this.parseYoutubeMeta( response );
-
-                if ( streams && Array.isArray( streams ) ) {
-
-                    // Limit to element tag name (video/audio)
-                    streams = streams.filter( function( item ) {
-                        return item.type === element.tagName.toLowerCase();
-                    } );
-
-                    // Sort streams by playability
-                    streams.sort( function( a, b ) {
-                        const sortVals = {
-                            'unknown': -1,
-                            'no': -1,
-                            'maybe': 0,
-                            'probably': 1
-                        };
-
-                        return sortVals[ a.browserSupport ] + sortVals[ b.browserSupport ];
-                    } );
-
-                    // Only return streams with audio
-                    if ( this.options.withAudio ) {
-                        streams = streams.filter( function( item ) {
-                            return item.hasAudio;
-                        } );
-                    }
-
-                    const allowedFormats = this.getAllowedFormats();
-
-                    // Select the default value.
-                    var selectedStream = null;
-                    var selectedFormat = null;
-                    for ( let i = 0; i < allowedFormats.length; i++ ) {
-
-                        const format = allowedFormats[ i ];
-
-                        const search = streams.filter( item => {
-                            return this.itagMap[ item.itag ] === format;
-                        } );
-
-                        if ( search && search.length ) {
-                            selectedStream = search.shift();
-                            selectedFormat = format;
-                            break;
-                        }
-                    }
-
-                    /**
-                     * Fitler selected video stream object.
-                     *
-                     * @param {object} selectedStream Object containing url and label.
-                     * @param {HTMLElement} element Video element.
-                     * @param {string} selectedFormat Select itag value.
-                     * @param {object} streams Object of itag and stream objects.
-                     *
-                     * @type {null|object}
-                     */
-                    selectedStream = this.applyFilters( 'video.stream', selectedStream, element, selectedFormat, streams );
-
-                    let domAttrs = {
-                        src: '',
-                        type: ''
-                    };
-
-                    if ( selectedStream && 'url' in selectedStream && selectedStream.url ) {
-                        domAttrs.src = selectedStream.url;
-                    }
-
-                    if ( selectedStream.type && selectedStream.type !== 'unknown' && selectedStream.mime && selectedStream.mime !== 'unknown' ) {
-                        domAttrs.type = `${selectedStream.type}/${selectedStream.mime}`;
-                    }
-
-                    /**
-                     * Apply fitler for the selected video source string.
-                     *
-                     * @param {string} selectedSource Source stream url.
-                     * @param {object} selectedStream Stream object.
-                     * @param {HTMLElement} element Video element.
-                     * @param {string} selectedFormat Select itag value.
-                     * @param {object} streams Object of itag and stream objects.
-                     *
-                     * @type {null|string}
-                     */
-                    domAttrs.src = this.applyFilters( 'video.source', domAttrs.src, selectedStream, element, selectedFormat, streams );
-
-                    // Only add source if not empty
-                    if ( domAttrs.src && typeof domAttrs.src.toString === 'function' && domAttrs.src.toString().length ) {
-                        element.src = domAttrs.src;
-
-                        if ( domAttrs.type && domAttrs.type.length ) {
-                            element.type = domAttrs.type;
-                        }
-                    } else {
-                        console.warn( `YouTubeToHtml5 unable to load video for ID: ${videoId}` );
-                    }
-                }
-            }
-        } ).finally( response => {
-            /**
-             * Allways call action after request completion.
-             *
-             * @param {HTMLElement} element
-             * @param {object} response
-             */
-            this.doAction( 'api.after', element, response );
-        } );
-
+            fetch(requestUrl).then(response => {
+                response.json().then(json => this.doAction('load.success', element, json));
+            }).catch(response => {
+                response.json().then(json => this.doAction('load.failed', element, json));
+            }).finally(() => {
+                this.doAction('load.after', element)
+            });
+        }
     }
-};
 
-if ( typeof module === 'object' && typeof module.exports === 'object' ) {
-    module.exports = YouTubeToHtml5;
+    /**
+     * Parse raw YouTube response into usable data.
+     * @param {YouTubeToHtml5} context
+     * @param {Element} element
+     * @param {object} response
+     */
+    static _actionLoadSuccess(context, element, response) {
+
+        let streams = context.getStreamData(response);
+
+        // Limit to element tag name (video/audio)
+        streams = streams.filter(item => item.type === element.tagName.toLowerCase());
+
+        // Get the top priority stream
+        const stream = streams.shift();
+
+        if (stream) {
+            element.src = stream.url;
+        }
+    }
+
+    static _actionLoadFailed(context, element, response) {
+        console.warn(`${context.class} was unable to load video.`);
+    }
+
 }
+
+export default YouTubeToHtml5;
