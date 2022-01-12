@@ -1,1 +1,642 @@
-'use strict';function _typeof(a){"@babel/helpers - typeof";return _typeof="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function(a){return typeof a}:function(a){return a&&"function"==typeof Symbol&&a.constructor===Symbol&&a!==Symbol.prototype?"symbol":typeof a},_typeof(a)}function YouTubeToHtml5(){var a=0<arguments.length&&void 0!==arguments[0]?arguments[0]:{};for(var b in this.hooks={},this.options={},this.defaultOptions)this.options[b]=b in a?a[b]:this.defaultOptions[b];this.options.autoload&&this.load()}YouTubeToHtml5.prototype.defaultOptions={selector:"video[data-yt2html5]",attribute:"data-yt2html5",formats:"*",autoload:!0,withAudio:!1},YouTubeToHtml5.prototype.globalHooks={},YouTubeToHtml5.prototype.getHooks=function(a,b){var c=[];if(a in this.globalHooks){var d=this.globalHooks[a];d=d.filter(function(a){return a.name===b}),d=d.sort(function(c,a){return c.priority-a.priority}),c=c.concat(d)}if(a in this.hooks){var e=this.hooks[a];e=e.filter(function(a){return a.name===b}),e=e.sort(function(c,a){return c.priority-a.priority}),c=c.concat(e)}return c},YouTubeToHtml5.prototype.addHook=function(a,b){a in this.globalHooks||(this.globalHooks[a]=[]),a in this.hooks||(this.hooks[a]=[]),"global"in b&&b.global?this.globalHooks[a].push(b):this.hooks[a].push(b)},YouTubeToHtml5.prototype.addAction=function(a,b){var c=2<arguments.length&&arguments[2]!==void 0?arguments[2]:10,d=!!(3<arguments.length&&arguments[3]!==void 0)&&arguments[3];this.addHook("actions",{name:a,callback:b,priority:c,global:d})},YouTubeToHtml5.prototype.doAction=function(a){for(var b=this.getHooks("actions",a),c=arguments.length,d=Array(1<c?c-1:0),e=1;e<c;e++)d[e-1]=arguments[e];for(var f=0;f<b.length;f++){var g;(g=b[f]).callback.apply(g,d)}},YouTubeToHtml5.prototype.addFilter=function(a,b){var c=2<arguments.length&&arguments[2]!==void 0?arguments[2]:10,d=!!(3<arguments.length&&arguments[3]!==void 0)&&arguments[3];this.addHook("filters",{name:a,callback:b,priority:c,global:d})},YouTubeToHtml5.prototype.applyFilters=function(a,b){for(var c=this.getHooks("filters",a),d=arguments.length,e=Array(2<d?d-2:0),f=2;f<d;f++)e[f-2]=arguments[f];for(var g=0;g<c.length;g++){var h;b=(h=c[g]).callback.apply(h,[b].concat(e))}return b},YouTubeToHtml5.prototype.itagMap={18:"360p",22:"720p",37:"1080p",38:"3072p",82:"360p3d",83:"480p3d",84:"720p3d",85:"1080p3d",133:"240pna",134:"360pna",135:"480pna",136:"720pna",137:"1080pna",264:"1440pna",298:"720p60",299:"1080p60na",160:"144pna",139:"48kbps",140:"128kbps",141:"256kbps"},YouTubeToHtml5.prototype.urlToId=function(a){var b=a.match(/^(?:http(?:s)?:\/\/)?(?:www\.)?(?:m\.)?(?:youtu\.be\/|(?:(?:youtube-nocookie\.com\/|youtube\.com\/)(?:(?:watch)?\?(?:.*&)?v(?:i)?=|(?:embed|v|vi|user)\/)))([a-zA-Z0-9\-_]*)/);return Array.isArray(b)&&b[1]?b[1]:a},YouTubeToHtml5.prototype.fetch=function(a){return new Promise(function(b,c){var d=new XMLHttpRequest;d.open("GET",a,!0),d.onreadystatechange=function(){4===this.readyState&&(200<=this.status&&400>this.status?b(this.responseText):c(this))},d.send(),d=null})},YouTubeToHtml5.prototype.getAllowedFormats=function(){var a=[];return Array.isArray(this.options.formats)?a=this.options.formats:this.itagMap[this.options.formats]?a=[this.options.formats]:"*"===this.options.formats&&(a=Object.values(this.itagMap).sort()),a},YouTubeToHtml5.prototype.getElements=function(a){var b=null;return a&&(NodeList.prototype.isPrototypeOf(a)||HTMLCollection.prototype.isPrototypeOf(a)?b=a:"object"===_typeof(a)&&"nodeType"in a&&a.nodeType?b=[a]:b=document.querySelectorAll(this.options.selector)),b=Array.from(b||""),this.applyFilters("elements",b)},YouTubeToHtml5.prototype.youtubeDataApiEndpoint=function(a){var b="https://yt2html5.com/?id=".concat(a);return this.applyFilters("api.endpoint",b,a,null)},YouTubeToHtml5.prototype.parseUriString=function(a){return a.split("&").reduce(function(a,b){var c=b.split("=").map(function(a){return decodeURIComponent(a.replace("+"," "))});return a[c[0]]=c[1],a},{})},YouTubeToHtml5.prototype.canPlayType=function(a){var b=null;b=/^audio/i.test(a)?document.createElement("audio"):document.createElement("video");var c=b&&"function"==typeof b.canPlayType?b.canPlayType(a):"unknown";return c?c:"no"},YouTubeToHtml5.prototype.parseYoutubeMeta=function(a){var b=this,c=[],d=[];if("string"==typeof a)try{a=JSON.parse(a)}catch(a){return null}var e=a.data||{};return e=this.applyFilters("api.response",e,a),e.hasOwnProperty("url_encoded_fmt_stream_map")&&(c=c.concat(e.url_encoded_fmt_stream_map.split(",").map(function(a){return b.parseUriString(a)}))),e.player_response.streamingData&&e.player_response.streamingData.formats&&(c=c.concat(e.player_response.streamingData.formats)),e.hasOwnProperty("adaptive_fmts")&&(c=c.concat(e.adaptive_fmts.split(",").map(function(a){return b.parseUriString(a)}))),e.player_response.streamingData&&e.player_response.streamingData.adaptiveFormats&&(c=c.concat(e.player_response.streamingData.adaptiveFormats)),c.forEach(function(a){if(a&&"itag"in a&&b.itagMap[a.itag]){var c={_raw:a,itag:a.itag,url:null,label:null,type:"unknown",mime:"unknown",hasAudio:!1,browserSupport:"unknown"};if("url"in a&&a.url?c.url=a.url:"signatureCipher"in a,"audioQuality"in a&&a.audioQuality&&(c.hasAudio=!0),c.label="qualityLabel"in a&&a.qualityLabel?a.qualityLabel:b.itagMap[a.itag],"mimeType"in a){var e=a.mimeType.match(/^(audio|video)(?:\/([^;]+);)?/i);e[1]&&(c.type=e[1]),e[2]&&(c.mime=e[2]),c.browserSupport=b.canPlayType("".concat(c.type,"/").concat(c.mime))}c.url&&d.push(c)}}),d=this.applyFilters("api.results",d,e),d},YouTubeToHtml5.prototype.load=function(){var a=this,b=this.getElements(this.options.selector);b&&b.length&&b.forEach(function(b){a.loadSingle(b)})},YouTubeToHtml5.prototype.loadSingle=function(a){var b=this,c=1<arguments.length&&arguments[1]!==void 0?arguments[1]:null,d=c||this.options.attribute;if(a.getAttribute(d)){var e=this.urlToId(a.getAttribute(d)),f=this.youtubeDataApiEndpoint(e);this.doAction("api.before",a),this.fetch(f).then(function(c){if(c){var d=b.parseYoutubeMeta(c);if(d&&Array.isArray(d)){d=d.filter(function(b){return b.type===a.tagName.toLowerCase()}),d.sort(function(c,a){var b={unknown:-1,no:-1,maybe:0,probably:1};return b[c.browserSupport]+b[a.browserSupport]}),b.options.withAudio&&(d=d.filter(function(a){return a.hasAudio}));for(var f,g=b.getAllowedFormats(),h=null,j=null,k=function(a){var c=g[a],e=d.filter(function(a){return b.itagMap[a.itag]===c});if(e&&e.length)return h=e.shift(),j=c,"break"},l=0;l<g.length&&(f=k(l),"break"!==f);l++);h=b.applyFilters("video.stream",h,a,j,d);var m={src:"",type:""};h&&"url"in h&&h.url&&(m.src=h.url),h.type&&"unknown"!==h.type&&h.mime&&"unknown"!==h.mime&&(m.type="".concat(h.type,"/").concat(h.mime)),m.src=b.applyFilters("video.source",m.src,h,a,j,d),m.src&&"function"==typeof m.src.toString&&m.src.toString().length?(a.src=m.src,m.type&&m.type.length&&(a.type=m.type)):console.warn("YouTubeToHtml5 unable to load video for ID: ".concat(e))}}})["finally"](function(c){b.doAction("api.after",a,c)})}},"object"===("undefined"==typeof module?"undefined":_typeof(module))&&"object"===_typeof(module.exports)&&(module.exports=YouTubeToHtml5);
+'use strict';fu'use strict';
+
+/**
+ * Embed a YouTube video as an HTML5 <video> element.
+ *
+ * @param {object} options
+ * @constructor
+ */
+function YouTubeToHtml5( options = {} ) {
+
+    /**
+     * Create an empty local object for storing hooks.
+     *
+     * @type {object}
+     */
+    this.hooks = {};
+
+    /**
+     * Create an empty object for storing options.
+     *
+     * @type {object}
+     */
+    this.options = {};
+
+    // Basic option setting.
+    for ( var key in this.defaultOptions ) {
+        if ( key in options ) {
+            this.options[ key ] = options[ key ];
+        } else {
+            this.options[ key ] = this.defaultOptions[ key ];
+        }
+    }
+
+    // Run on init
+    if ( this.options.autoload ) {
+        return this.load();
+    }
+}
+
+/**
+ * Default settable options.
+ *
+ * @type {object}
+ */
+YouTubeToHtml5.prototype.defaultOptions = {
+    selector: 'video[data-yt2html5]',
+    attribute: 'data-yt2html5',
+    formats: '*', // Accepts an array of formats e.g. [ '1080p', '720p', '320p' ] or a single format '1080p'. Asterix for all.
+    autoload: true,
+    withAudio: false
+};
+
+/**
+ * Internal hooks API storage.
+ *
+ * @type {}
+ */
+YouTubeToHtml5.prototype.globalHooks = {};
+
+/**
+ * Get hooks by type and name. Ordered by priority.
+ *
+ * @param {string} type
+ * @param {string} name
+ * @returns {BigUint64Array|*[]}
+ */
+YouTubeToHtml5.prototype.getHooks = function( type, name ) {
+
+    let hooks = [];
+
+    if ( type in this.globalHooks ) {
+
+        let globalHooks = this.globalHooks[ type ];
+            globalHooks = globalHooks.filter( el => el.name === name );
+            globalHooks = globalHooks.sort( ( a, b ) => a.priority - b.priority );
+
+        hooks = hooks.concat( globalHooks );
+    }
+
+    if ( type in this.hooks ) {
+
+        let localHooks = this.hooks[ type ];
+            localHooks = localHooks.filter( el => el.name === name );
+            localHooks = localHooks.sort( ( a, b ) => a.priority - b.priority );
+
+        hooks = hooks.concat( localHooks );
+    }
+
+    return hooks;
+};
+
+/**
+ * Get hooks by type and name. Ordered by priority.
+ *
+ * @param {string} type
+ * @param {object} hookMeta
+ */
+YouTubeToHtml5.prototype.addHook = function( type, hookMeta ) {
+
+
+    // Create new global hook type array.
+    if ( !( type in this.globalHooks ) ) {
+        this.globalHooks[ type ] = [];
+    }
+
+    // Create new local hook type array.
+    if ( !( type in this.hooks ) ) {
+        this.hooks[ type ] = [];
+    }
+
+    // Add to global.
+    if ( 'global' in hookMeta && hookMeta.global ) {
+        this.globalHooks[ type ].push( hookMeta );
+    }
+
+    // Else, add to local.
+    else {
+        this.hooks[ type ].push( hookMeta );
+    }
+
+};
+
+/**
+ * Add event lister.
+ *
+ * @param {string} action Name of action to trigger callback on.
+ * @param {function} callback
+ * @param {number} priority
+ * @param {boolean} global True if this action should apply to all instances.
+ */
+YouTubeToHtml5.prototype.addAction = function( action, callback, priority = 10, global = false ) {
+    this.addHook( 'actions', {
+        name: action,
+        callback: callback,
+        priority: priority,
+        global: global
+    } );
+};
+
+/**
+ * Trigger an action.
+ *
+ * @param {string} name Name of action to run.
+ * @param {*} args Arguments passed to the callback function.
+ */
+YouTubeToHtml5.prototype.doAction = function( name, ...args ) {
+    const hooks = this.getHooks( 'actions', name );
+    for ( let i = 0; i < hooks.length; i++ ) {
+        hooks[ i ].callback( ...args );
+    }
+};
+
+/**
+ * Register filter.
+ *
+ * @param {string} filter Name of filter to trigger callback on.
+ * @param {function} callback
+ * @param {number} priority
+ * @param {boolean} global True if this action should apply to all instances.
+ */
+YouTubeToHtml5.prototype.addFilter = function( filter, callback, priority = 10, global = false ) {
+    this.addHook( 'filters', {
+        name: filter,
+        callback: callback,
+        priority: priority,
+        global: global
+    } );
+};
+
+/**
+ * Apply all named filters to a value.
+ *
+ * @param {string} name Name of action to run.
+ * @param {*} value The value to be mutated.
+ * @param {*} args Arguments passed to the callback function.
+ * @returns {*}
+ */
+YouTubeToHtml5.prototype.applyFilters = function( name, value, ...args ) {
+    const hooks = this.getHooks( 'filters', name );
+    for ( let i = 0; i < hooks.length; i++ ) {
+        value = hooks[ i ].callback( value, ...args );
+    }
+
+    return value;
+};
+
+/**
+ * Itag enum to type string.
+ *
+ * @link {https://support.google.com/youtube/answer/2853702}
+ * @type {object}
+ */
+YouTubeToHtml5.prototype.itagMap = {
+    18: '360p',
+    22: '720p',
+    37: '1080p',
+    38: '3072p',
+    82: '360p3d', // 3D
+    83: '480p3d', // 3D
+    84: '720p3d', // 3D
+    85: '1080p3d', // 3D
+    133: '240pna',
+    134: '360pna',
+    135: '480pna',
+    136: '720pna',
+    137: '1080pna',
+    264: '1440pna',
+    298: '720p60', // 60fps
+    299: '1080p60na', // 60fps
+    160: '144pna', // Audio
+    139: '48kbps', // Audio
+    140: '128kbps', // Audio
+    141: '256kbps' // Audio
+};
+
+/**
+ * Extract the Youtube ID from a URL.
+ *
+ * @param {string} url
+ * @returns {string}
+ */
+YouTubeToHtml5.prototype.urlToId = function( url ) {
+    const regex = /^(?:http(?:s)?:\/\/)?(?:www\.)?(?:m\.)?(?:youtu\.be\/|(?:(?:youtube-nocookie\.com\/|youtube\.com\/)(?:(?:watch)?\?(?:.*&)?v(?:i)?=|(?:embed|v|vi|user)\/)))([a-zA-Z0-9\-_]*)/;
+    const matches = url.match( regex );
+    return Array.isArray( matches ) && matches[ 1 ] ? matches[ 1 ] : url;
+};
+
+/**
+ * Basic GET ajax request.
+ *
+ * @param url
+ * @returns {Promise}
+ */
+YouTubeToHtml5.prototype.fetch = function( url ) {
+    return new Promise( ( accept, reject ) => {
+        var request = new XMLHttpRequest();
+        request.open( 'GET', url, true );
+
+        request.onreadystatechange = function() {
+            if ( this.readyState === 4 ) {
+                if ( this.status >= 200 && this.status < 400 ) {
+                    accept( this.responseText );
+                } else {
+                    reject( this );
+                }
+            }
+        };
+
+        request.send();
+        request = null;
+    } );
+}
+
+/**
+ * Get the users defined allowed formats. Defaults to all.
+ *
+ * @return {string[]}
+ */
+YouTubeToHtml5.prototype.getAllowedFormats = function() {
+    let allowedFormats = [];
+
+    if ( Array.isArray( this.options.formats ) ) {
+        allowedFormats = this.options.formats;
+    } else if ( this.itagMap[ this.options.formats ] ) {
+        allowedFormats = [ this.options.formats ];
+    } else if ( this.options.formats === '*' ) {
+        allowedFormats = Object.values( this.itagMap ).sort();
+    }
+
+    return allowedFormats;
+};
+
+/**
+ * Get list of elements found with the selector.
+ *
+ * @param {NodeList|HTMLCollection|string} selector
+ * @returns {array}
+ */
+YouTubeToHtml5.prototype.getElements = function( selector ) {
+    var elements = null;
+
+    if ( selector ) {
+        if ( NodeList.prototype.isPrototypeOf( selector ) || HTMLCollection.prototype.isPrototypeOf( selector ) ) {
+            elements = selector;
+        } else if ( typeof selector === 'object' && 'nodeType' in selector && selector.nodeType ) {
+            elements = [ selector ];
+        } else {
+            elements = document.querySelectorAll( this.options.selector );
+        }
+    }
+
+    elements = Array.from( elements || '' );
+
+    return this.applyFilters( 'elements', elements );
+};
+
+/**
+ * Build API url from video id.
+ *
+ * @param {string} videoId
+ * @returns {string}
+ */
+YouTubeToHtml5.prototype.youtubeDataApiEndpoint = function( videoId ) {
+    const proxy = `https://yt2html5.com/?id=${videoId}`;
+    return this.applyFilters( 'api.endpoint', proxy, videoId, null );
+};
+
+/**
+ * Parse URI encoded string.
+ *
+ * @param {string} string
+ * @returns {array}
+ */
+YouTubeToHtml5.prototype.parseUriString = function( string ) {
+    return string.split( '&' ).reduce( function( params, param ) {
+        const paramParts = param.split( '=' ).map( function( value ) {
+            return decodeURIComponent( value.replace( '+', ' ' ) );
+        } );
+
+        params[ paramParts[ 0 ] ] = paramParts[ 1 ];
+
+        return params;
+    }, {} );
+};
+
+/**
+ * Check if a given mime type can be played by the browser.
+ *
+ * @link https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/canPlayType
+ * @param {string} type For example "video/mp4"
+ * @return {CanPlayTypeResult|string} probably, maybe, no, unkown
+ */
+YouTubeToHtml5.prototype.canPlayType = function( type) {
+
+    var phantomEl = null;
+
+    if ( /^audio/i.test( type ) ) {
+        phantomEl = document.createElement( 'audio' );
+    } else {
+        phantomEl = document.createElement( 'video' );
+    }
+
+    const value = phantomEl && typeof phantomEl.canPlayType === 'function' ? phantomEl.canPlayType( type ) : 'unknown';
+
+    return value ? value : 'no';
+}
+
+/**
+ * Parse raw YouTube response into usable data.
+ *
+ * @param rawData
+ * @returns {array}
+ */
+YouTubeToHtml5.prototype.parseYoutubeMeta = function( rawData ) {
+
+    let streams = [];
+    let results = [];
+
+    if ( typeof rawData === 'string' ) {
+        try {
+            rawData = JSON.parse( rawData );
+        } catch ( error ) {
+            return null;
+        }
+    }
+
+    let response = rawData.data || {};
+
+    /**
+     * Filter parsed API response.
+     *
+     * @type {object}
+     */
+    response = this.applyFilters( 'api.response', response, rawData );
+
+    // Extract data from API, in order of priority
+    if ( response.hasOwnProperty( 'url_encoded_fmt_stream_map' ) ) {
+        streams = streams.concat( response.url_encoded_fmt_stream_map.split( ',' ).map( s => {
+            return this.parseUriString( s );
+        } ) );
+    }
+
+    if ( response.player_response && response.player_response.streamingData && response.player_response.streamingData.formats ) {
+        streams = streams.concat( response.player_response.streamingData.formats );
+    }
+
+    if ( response.hasOwnProperty( 'adaptive_fmts' ) ) {
+        streams = streams.concat( response.adaptive_fmts.split( ',' ).map( s => {
+            return this.parseUriString( s );
+        } ) );
+    }
+
+    if ( response.player_response && response.player_response.streamingData && response.player_response.streamingData.adaptiveFormats ) {
+        streams = streams.concat( response.player_response.streamingData.adaptiveFormats );
+    }
+
+    // Build results array
+    streams.forEach( stream => {
+        if (!stream) {
+          return;
+        }
+
+        if ( stream && 'itag' in stream && this.itagMap[ stream.itag ] ) {
+            let thisData = {
+                _raw: stream,
+                itag: stream.itag,
+                url: null,
+                label: null,
+                type: 'unknown',
+                mime: 'unknown',
+                hasAudio: false,
+                browserSupport: 'unknown'
+            };
+
+            // Extract url from stream.
+            if ( 'url' in stream && stream.url ) {
+                thisData.url = stream.url;
+            } else if ( 'signatureCipher' in stream ) {
+                // @todo decode cipher and append to url
+            }
+
+            // Set simple flag if source has audio
+            if ( 'audioQuality' in stream && stream.audioQuality ) {
+                thisData.hasAudio = true;
+            }
+
+            // Extract stream label.
+            if ( 'qualityLabel' in stream && stream.qualityLabel ) {
+                thisData.label = stream.qualityLabel;
+            } else {
+                thisData.label = this.itagMap[ stream.itag ];
+            }
+
+            // Extract stream data from mimetype.
+            if ( 'mimeType' in stream ) {
+
+                const mimeParts = stream.mimeType.match( /^(audio|video)(?:\/([^;]+);)?/i );
+
+                // Set media type (video, audo)
+                if ( mimeParts[ 1 ] ) {
+                    thisData.type = mimeParts[ 1 ];
+                }
+
+                // Set media mime (mp4, ogg...etc)
+                if ( mimeParts[ 2 ] ) {
+                    thisData.mime = mimeParts[ 2 ];
+                }
+
+                // Set browser support rating
+                thisData.browserSupport = this.canPlayType( `${thisData.type}/${thisData.mime}` );
+            }
+
+            // Only add to results if url exits
+            if ( thisData.url ) {
+                results.push( thisData );
+            }
+        }
+    } );
+
+    /**
+     * Apply filter filter.
+     *
+     * @param {object} results Object containing extracted results from API response.
+     * @param {object} response Parsed API response.
+     *
+     * @type {object}
+     */
+    results = this.applyFilters( 'api.results', results, response );
+
+    return results;
+};
+
+/**
+ * Run our full process. Loops through each element matching the selector.
+ */
+YouTubeToHtml5.prototype.load = function() {
+    const elements = this.getElements( this.options.selector );
+
+    if ( elements && elements.length ) {
+        return Promise.all(elements.map( element =>  this.loadSingle( element ) ));
+    }
+};
+
+/**
+ * Process a single element.
+ *
+ * @param {Element} element
+ * @param {null|string} attr Used to override default setting.
+ */
+YouTubeToHtml5.prototype.loadSingle = function( element, attr = null ) {
+
+    /**
+     * Attribute name for grabbing YouTube identifier/url.
+     *
+     * @type {string}
+     */
+    const attribute = attr || this.options.attribute;
+
+    // Check if element has attribute value
+    if ( element.getAttribute( attribute ) ) {
+
+        /**
+         * Attempt extraction of YouTube video ID. Returns attribute value if no match.
+         *
+         * @type {string}
+         */
+        const videoId = this.urlToId( element.getAttribute( attribute ) );
+
+        /**
+         * Build the request URL from YouTube ID.
+         *
+         * @type {string}
+         */
+        const requestUrl = this.youtubeDataApiEndpoint( videoId );
+
+        /**
+         * Call action before request is made.
+         *
+         * @param {HTMLElement} element
+         */
+        this.doAction( 'api.before', element );
+
+        /**
+         * Make the HTTP request.
+         */
+        return this.fetch( requestUrl ).then( response => {
+            if ( response ) {
+
+                let streams = this.parseYoutubeMeta( response );
+
+                if ( streams && Array.isArray( streams ) ) {
+
+                    // Limit to element tag name (video/audio)
+                    streams = streams.filter( function( item ) {
+                        return item.type === element.tagName.toLowerCase();
+                    } );
+
+                    // Sort streams by playability
+                    streams.sort( function( a, b ) {
+                        const sortVals = {
+                            'unknown': -1,
+                            'no': -1,
+                            'maybe': 0,
+                            'probably': 1
+                        };
+
+                        return sortVals[ a.browserSupport ] + sortVals[ b.browserSupport ];
+                    } );
+
+                    // Only return streams with audio
+                    if ( this.options.withAudio ) {
+                        streams = streams.filter( function( item ) {
+                            return item.hasAudio;
+                        } );
+                    }
+
+                    const allowedFormats = this.getAllowedFormats();
+
+                    // Select the default value.
+                    var selectedStream = null;
+                    var selectedFormat = null;
+                    for ( let i = 0; i < allowedFormats.length; i++ ) {
+
+                        const format = allowedFormats[ i ];
+
+                        const search = streams.filter( item => {
+                            return this.itagMap[ item.itag ] === format;
+                        } );
+
+                        if ( search && search.length ) {
+                            selectedStream = search.shift();
+                            selectedFormat = format;
+                            break;
+                        }
+                    }
+
+                    /**
+                     * Fitler selected video stream object.
+                     *
+                     * @param {object} selectedStream Object containing url and label.
+                     * @param {HTMLElement} element Video element.
+                     * @param {string} selectedFormat Select itag value.
+                     * @param {object} streams Object of itag and stream objects.
+                     *
+                     * @type {null|object}
+                     */
+                    selectedStream = this.applyFilters( 'video.stream', selectedStream, element, selectedFormat, streams );
+
+                    let domAttrs = {
+                        src: '',
+                        type: ''
+                    };
+
+                    if ( selectedStream && 'url' in selectedStream && selectedStream.url ) {
+                        domAttrs.src = selectedStream.url;
+                    }
+
+                    if ( selectedStream && selectedStream.type && selectedStream.type !== 'unknown' && selectedStream.mime && selectedStream.mime !== 'unknown' ) {
+                        domAttrs.type = `${selectedStream.type}/${selectedStream.mime}`;
+                    }
+
+                    /**
+                     * Apply fitler for the selected video source string.
+                     *
+                     * @param {string} selectedSource Source stream url.
+                     * @param {object} selectedStream Stream object.
+                     * @param {HTMLElement} element Video element.
+                     * @param {string} selectedFormat Select itag value.
+                     * @param {object} streams Object of itag and stream objects.
+                     *
+                     * @type {null|string}
+                     */
+                    domAttrs.src = this.applyFilters( 'video.source', domAttrs.src, selectedStream, element, selectedFormat, streams );
+
+                    // Only add source if not empty
+                    if ( domAttrs.src && typeof domAttrs.src.toString === 'function' && domAttrs.src.toString().length ) {
+                        element.src = domAttrs.src;
+
+                        if ( domAttrs.type && domAttrs.type.length ) {
+                            element.type = domAttrs.type;
+                        }
+                    } else {
+                        throw new Error( `YouTubeToHtml5 unable to load video for ID: ${videoId}` );
+                    }
+                }
+            }
+        } ).finally( response => {
+            /**
+             * Allways call action after request completion.
+             *
+             * @param {HTMLElement} element
+             * @param {object} response
+             */
+            this.doAction( 'api.after', element, response );
+        } );
+
+    }
+};
+
+if ( typeof module === 'object' && typeof module.exports === 'object' ) {
+    module.exports = YouTubeToHtml5;
+}

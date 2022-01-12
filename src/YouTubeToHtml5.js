@@ -33,7 +33,7 @@ function YouTubeToHtml5( options = {} ) {
 
     // Run on init
     if ( this.options.autoload ) {
-        this.load();
+        return this.load();
     }
 }
 
@@ -380,7 +380,7 @@ YouTubeToHtml5.prototype.parseYoutubeMeta = function( rawData ) {
         } ) );
     }
 
-    if ( response.player_response.streamingData && response.player_response.streamingData.formats ) {
+    if ( response.player_response && response.player_response.streamingData && response.player_response.streamingData.formats ) {
         streams = streams.concat( response.player_response.streamingData.formats );
     }
 
@@ -390,12 +390,15 @@ YouTubeToHtml5.prototype.parseYoutubeMeta = function( rawData ) {
         } ) );
     }
 
-    if ( response.player_response.streamingData && response.player_response.streamingData.adaptiveFormats ) {
+    if ( response.player_response && response.player_response.streamingData && response.player_response.streamingData.adaptiveFormats ) {
         streams = streams.concat( response.player_response.streamingData.adaptiveFormats );
     }
 
     // Build results array
     streams.forEach( stream => {
+        if (!stream) {
+          return;
+        }
 
         if ( stream && 'itag' in stream && this.itagMap[ stream.itag ] ) {
             let thisData = {
@@ -474,9 +477,7 @@ YouTubeToHtml5.prototype.load = function() {
     const elements = this.getElements( this.options.selector );
 
     if ( elements && elements.length ) {
-        elements.forEach( element => {
-            this.loadSingle( element );
-        } );
+        return Promise.all(elements.map( element =>  this.loadSingle( element ) ));
     }
 };
 
@@ -522,9 +523,7 @@ YouTubeToHtml5.prototype.loadSingle = function( element, attr = null ) {
         /**
          * Make the HTTP request.
          */
-        this.fetch( requestUrl ).then( response => {
-
-
+        return this.fetch( requestUrl ).then( response => {
             if ( response ) {
 
                 let streams = this.parseYoutubeMeta( response );
@@ -596,7 +595,7 @@ YouTubeToHtml5.prototype.loadSingle = function( element, attr = null ) {
                         domAttrs.src = selectedStream.url;
                     }
 
-                    if ( selectedStream.type && selectedStream.type !== 'unknown' && selectedStream.mime && selectedStream.mime !== 'unknown' ) {
+                    if ( selectedStream && selectedStream.type && selectedStream.type !== 'unknown' && selectedStream.mime && selectedStream.mime !== 'unknown' ) {
                         domAttrs.type = `${selectedStream.type}/${selectedStream.mime}`;
                     }
 
@@ -621,7 +620,7 @@ YouTubeToHtml5.prototype.loadSingle = function( element, attr = null ) {
                             element.type = domAttrs.type;
                         }
                     } else {
-                        console.warn( `YouTubeToHtml5 unable to load video for ID: ${videoId}` );
+                        throw new Error( `YouTubeToHtml5 unable to load video for ID: ${videoId}` );
                     }
                 }
             }
