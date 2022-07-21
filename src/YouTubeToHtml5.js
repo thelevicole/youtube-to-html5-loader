@@ -17,11 +17,20 @@ class YouTubeToHtml5 {
     hooks = {};
 
     /**
-     * @param {object} options
+     * @param {{
+     *     endpoint: string,
+     *     selector: string,
+     *     attribute: string,
+     *     formats: string|array,
+     *     autoload: boolean,
+     *     withAudio: boolean,
+     *     withVideo: boolean
+     * }} options
      */
     constructor(options) {
         this.options = options;
 
+        // Add default load actions.
         this.addAction('load.success', this.class._actionLoadSuccess, 0);
         this.addAction('load.failed', this.class._actionLoadFailed, 0);
 
@@ -36,7 +45,7 @@ class YouTubeToHtml5 {
      * @param defaultValue
      * @returns {*}
      */
-    getOption(name, defaultValue) {
+    getOption(name, defaultValue = null) {
         if (!defaultValue && name in this.class.defaultOptions) {
             defaultValue = this.class.defaultOptions[name];
         }
@@ -433,10 +442,68 @@ class YouTubeToHtml5 {
         }
     }
 
+    /**
+     * Handle failed response.
+     * @param {YouTubeToHtml5} context
+     * @param {Element} element
+     * @param {object} response
+     */
     static _actionLoadFailed(context, element, response) {
         console.warn(`${context.class} was unable to load video.`);
     }
 
 }
 
+/**
+ * Add class to the window's global scope.
+ *
+ * @type {YouTubeToHtml5}
+ */
+window.YouTubeToHtml5 = YouTubeToHtml5;
+
+/**
+ * Add jQuery plugin if exists.
+ */
+if (typeof jQuery !== 'undefined') {
+    (function($) {
+        /**
+         *
+         * @param {{
+         *     endpoint: string,
+         *     formats: string|array,
+         *     autoload: boolean,
+         *     withAudio: boolean,
+         *     withVideo: boolean
+         * }} options
+         * @return {YouTubeToHtml5}
+         */
+        $.fn.youtubeToHtml5 = function(options = {}) {
+
+            // Cache user default autoload option.
+            const isAutoload = 'autoload' in options ? options.autoload : YouTubeToHtml5.defaultOptions.autoload;
+
+            // For jQuery we will need to make some modifications before we process loading.
+            options.autoload = false;
+
+            // Create new instance.
+            const controller = new YouTubeToHtml5(options);
+
+            // Overide core elements with jQuery selected elements.
+            controller.addFilter('elements', () => Array.from(this));
+
+            // Now we can autoload.
+            if (isAutoload) {
+                controller.load();
+            }
+
+            // Return controller instance.
+            return controller;
+        }
+
+    })(jQuery);
+}
+
+/**
+ * Export module.
+ */
 export default YouTubeToHtml5;
