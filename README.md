@@ -20,7 +20,7 @@ import YouTubeToHtml5 from '@thelevicole/youtube-to-html5-loader'
 
 #### jsDeliver
 ```html
-<script src="https://cdn.jsdelivr.net/npm/@thelevicole/youtube-to-html5-loader@5/dist/YouTubeToHtml5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@thelevicole/youtube-to-html5-loader@5/dist/YouTubeToHtml5.js"></script>
 ```
 
 ### Initiating
@@ -45,10 +45,20 @@ There are a number of options that can be passed to the constructor these are:
 | `withAudio` | Whether or not to only load streams with audio. | `boolean` | `true` |
 | `withVideo` | Whether or not to only load streams with video. | `boolean` | `true` |
 
+### Changing the API endpoint and custom server
+This package uses a man-in-the-middle server (yt2html.com) to handle the API requests. This can cause issues as YouTube often blocks the host causing the library to not work. A solution to this is to host your own man-in-the-middle server and change the libraries API endpoint.
+
+Simply modify the libraries global endpoint with the below snippet. Make sure to place before any `YouTubeToHtml5()` initiations.
+```javascript
+YouTubeToHtml5.defaultOptions.endpoint = 'http://myserver.com/?id=';
+```
+
+The server source can be found here: [thelevicole/youtube-to-html5-server](https://github.com/thelevicole/youtube-to-html5-server)
+
 ### Hooks
 The library has a hook mechanism for filters and actions. If you've worked with WordPress before you'll be familiar with this concept.
 
-> Note: all filters and actions will have the library instance (context) passed as the first argument in the callback.
+> Note: You'll need to disable auto loading when using any hooks. First create an instance, then bind your hooks and finally call the `.load()` method.
 
 #### Filters
 Modify and return values.
@@ -59,7 +69,7 @@ const controller = new YouTubeToHtml5({
 	autoload: false
 });
 
-controller.addFilter('request.url', function(context, url) {
+controller.addFilter('request.url', function(url) {
 	return `${url}&cache_bust=${(new Date()).getTime()}`;
 });
 
@@ -67,14 +77,14 @@ controller.load();
 ```
 
 #### Actions
-Run code everytime the action is called.
+Run code every time the action is called.
 ##### Before each load
 ```javascript
 const controller = new YouTubeToHtml5({
 	autoload: false
 });
 
-controller.addAction('load.before', function(context, element, data) {
+controller.addAction('load.before', function(element, data) {
 	element.classList.add('is-loading');
 });
 
@@ -86,7 +96,7 @@ const controller = new YouTubeToHtml5({
 	autoload: false
 });
 
-controller.addAction('load.after', function(context, element, data) {
+controller.addAction('load.after', function(element, data) {
 	element.classList.remove('is-loading');
 });
 
@@ -98,7 +108,7 @@ const controller = new YouTubeToHtml5({
 	autoload: false
 });
 
-controller.addAction('load.success', function(context, element, data) {
+controller.addAction('load.success', function(element, data) {
 	element.classList.addClass('is-playable');
 });
 
@@ -110,7 +120,28 @@ const controller = new YouTubeToHtml5({
 	autoload: false
 });
 
-controller.addAction('load.failed', function(context, element, data) {
+controller.addAction('load.failed', function(element, data) {
+	element.classList.add('is-unplayable');
+});
+
+controller.load();
+```
+
+### jQuery
+The library now includes a simply jQuery plugin which can be used like so...
+
+```js
+$('video[data-yt2html5]').youtubeToHtml5();
+```
+
+The `.youtubeToHtml5()` plugin returns the `YouTubeToHtml5` class instance so adding hooks etc is just as described above...
+
+```js
+const controller = $('video[data-yt2html5]').youtubeToHtml5({
+	autoload: false
+});
+
+controller.addAction('load.failed', function(element, data) {
 	element.classList.add('is-unplayable');
 });
 

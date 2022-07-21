@@ -145,7 +145,7 @@ class YouTubeToHtml5 {
      */
     doAction(name, ...args) {
         this.getHooks('actions', name).forEach(hook => {
-            hook.callback(this, ...args);
+            hook.callback.apply(this, args);
         });
     }
 
@@ -174,7 +174,7 @@ class YouTubeToHtml5 {
      */
     applyFilters(name, value, ...args) {
         this.getHooks('filters', name).forEach(hook => {
-            value = hook.callback(this, value, ...args);
+            value = hook.callback.apply(this, [value].concat(args));
         });
         return value;
     }
