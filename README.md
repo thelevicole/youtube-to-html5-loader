@@ -1,5 +1,5 @@
 
-# Load YoutTube videos as HTML5 emebed element
+# Load YouTube videos as HTML5 embed element
 
 [![](https://data.jsdelivr.com/v1/package/npm/@thelevicole/youtube-to-html5-loader/badge)](https://www.jsdelivr.com/package/npm/@thelevicole/youtube-to-html5-loader)
 [![Latest Stable Version](https://img.shields.io/npm/v/@thelevicole/youtube-to-html5-loader)](https://www.npmjs.com/package/@thelevicole/youtube-to-html5-loader)
@@ -34,7 +34,7 @@ new YouTubeToHtml5();
 ```
 
 ### Options
-There are a number of options that can be passed to the constructor these are:
+There are a number of options that can be passed to the constructor. These are:
 | Option | Description | Type | Default |
 |--|--|--|--|
 | `endpoint` | This is the API url thats used for retrieving data. More information to come. | `string` | `https://yt2html5.com/?id=` |
